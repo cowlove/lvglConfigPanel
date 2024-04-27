@@ -1,10 +1,6 @@
 #include <Arduino.h>
 #include <lvgl.h>
 
-
-//#include <demos/lv_demos.h>
-//#include <examples/lv_examples.h>
-
 #define WAVESHARE // use to switch between WaveShare4.3 and LilyGO T-RGB 2.1
 
 #ifdef WAVESHARE
@@ -64,7 +60,6 @@ void lvgl_port_tp_read(lv_indev_drv_t * indev, lv_indev_data_t * data)
     }
 }
 #endif
-
 
 void panel_setup() { 
     panel = new ESP_Panel();
