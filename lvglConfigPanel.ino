@@ -229,7 +229,6 @@ void set_btn_blue(lv_obj_t *b) {
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
 
-
 int selected_btn = -1;
 void btn_event_sel(lv_event_t *e) {
   int idx = (int)lv_event_get_user_data(e);
@@ -340,6 +339,7 @@ void conf_menu_create(lv_obj_t *parent)
                              LV_GRID_ALIGN_END, row, 1);
         lv_label_set_text_fmt(obj, "LABEL %d", row);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+        //lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
