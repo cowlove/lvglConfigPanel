@@ -1,0 +1,21 @@
+needs specific versions of arduino libraries: 
+	ESP32_Display_Panel v0.0.2
+	lvgl 8.3.11
+	
+3/27/24 Notes on square ESP32-S3-LCD-4.3 square touch LCD.  Apparently had been working on ~/Arduino/libraries/ESP32_Display_Panel/examples/LVGL/Porting in arduno IDE.  
+
+Docs: https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-4.3, follow arduino setup - synopsis: install direct arudino 2 from arduino website, download DS3-4.3-libraries.zip and install over ~/Arduino/libraries, install espressif esp32 in board managers
+Sometimes the Arduino IDE build fails, panic: runtime error: index out of range [5] with length 5 or some such.  Seems to help to restart the IDE
+Board settings: ESP32-S3 DEV Module,  8MB flash, 8MB partition, OPSI PSRAM
+TFT_eSPI library seems to not be configured for touch - 
+These solved by using different version of sketch
+Troubleshooting touch i2c errors
+E (2031) lcd_panel.io.i2c: panel_io_i2c_rx_buffer(128): i2c transaction failed
+E (2031) GT911: touch_gt911_read_cfg(262): GT911 read error!
+E (2032) GT911: esp_lcd_touch_new_i2c_gt911(122): GT911 init failed
+Abandoning this for now, may be a flakey board 
+
+Installed libraries from https://github.com/Xinyuan-LilyGO/LilyGo-T-RGB, this overwrites the .zip file lvgl library from WaveShare.   Had to symlink lvgl/{examples,demos} into lvgl/src/
+
+
+ 
