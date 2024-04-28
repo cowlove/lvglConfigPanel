@@ -182,25 +182,43 @@ void mon_menu_create(lv_obj_t *parent)
     }
 }
 
-const static int nr_rows = 20;
+const static int nr_rowsNO = 20;
 struct ParamEntry {
   lv_obj_t *sel;
   lv_obj_t *val;
   const char *label;
   const char *fmt;
   float inc;
-  float max;
+  float def;
   float min;
+  float max;
   bool wrap;
-  const char **enumlabels;
-} rows[nr_rows];
+  const char *enumlabels;
+  float current;
+} rowsNO[nr_rowsNO];
 
 lv_obj_t *multBut;
 
+ParamEntry rows[] = {
+  {NULL, NULL, "Navigation Mode", "%.0f", 1, 0, 0, 2, true, "HDG,NAV,LEVEL", 0},
+  {NULL, NULL, "Altitude", "%.0f'", 100, 7500, -1000, 18000, false, NULL, 0},
+  {NULL, NULL, "Max Bank", "%5.1f", 0.1, 15.5, 0, 22, false, NULL, 0},
+  {NULL, NULL, "Roll Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
+  {NULL, NULL, "Pitch Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
+  {NULL, NULL, "Pitch->Roll Coupling", "%+5.2f", 0.1, .03, -1, 1, false, NULL, 0},
+  {NULL, NULL, "Roll->Pitch Coupling", "%+5.2f", 0.1, .15, -1, 1, false, NULL, 0},
+  {NULL, NULL, "PID Select", "%.0f", 1, 0, 0, 4, true, "PITCH,ROLL,ALT,HDG,XTERR", 0},
+  {NULL, NULL, "P Gain", "%+5.2f", 0.01, 0.52, 0, 0, true, NULL, 0},
+  {NULL, NULL, "I Gain", "%+5.2f", 0.01, 0.001, 0, 0, true, NULL, 0},
+  {NULL, NULL, "I Max", "%+5.2f", 0.01, 0.5, 0, 0, true, NULL, 0},
+  {NULL, NULL, "D Gain", "%+5.2f", 0.01, 0.92, 0, 0, true, NULL, 0},
+  {NULL, NULL, "Final Gain", "%+5.2f", 0.01, 1.02, 0, 0, true, NULL, 0}
+
+};
+static const int nr_rows = sizeof(rows)/sizeof(rows[0]);
 
 void btn_event_1x(lv_event_t *e) {
-  lv_obj_t *o = lv_event_get_target(e);
-  lv_obj_t *l = lv_obj_get_child(o, 0);
+  lv_obj_t *l = lv_obj_get_child(multBut, 0);
   if (l == NULL)
     return;
   Serial.printf("pressed\n");
@@ -243,13 +261,17 @@ void btn_event_sel(lv_event_t *e) {
       set_btn_red(rows[selected_btn].sel);
     }
   }   
+  // reset multiplier button to 1X 
+  lv_obj_t *l = lv_obj_get_child(multBut, 0);
+  if (l != NULL)
+    lv_label_set_text(l, "1X");
 }
 
-void btn_event_inc(lv_event_t *e) {
-  int dir = (int)lv_event_get_user_data(e);
-  if (selected_btn < 0 || selected_btn >= nr_rows) 
-    return;
 
+void param_increment(int idx, float dir) { 
+  ParamEntry *p = &rows[idx];
+
+  // get value of multiplier button 
   lv_obj_t *l = lv_obj_get_child(multBut, 0);
   if (l == NULL)
     return;
@@ -258,14 +280,39 @@ void btn_event_inc(lv_event_t *e) {
   if (t != NULL)
     sscanf(t, "%dX", &mult);
 
-  t = lv_label_get_text(rows[selected_btn].val);
-  float val = 0;
-  if (t != 0) 
-    sscanf(t, "%f", &val);
-  val = val + dir * mult;
-  char buf[32];
-  snprintf(buf, sizeof(buf), "%.2f", val);
-  lv_label_set_text(rows[selected_btn].val, buf);
+  float val = p->current + p->inc * dir * mult;
+  if (p->max > p->min) { 
+    if (p->wrap) { 
+      if (val > p->max) val = p->min;
+      if (val < p->min) val = p->max;
+    } else {
+      if (val > p->max) val = p->max;
+      if (val < p->min) val = p->min;
+    }
+  }
+  p->current = val;
+
+  if (p->enumlabels == NULL) { 
+    char buf[32];
+    snprintf(buf, sizeof(buf), p->fmt, val);
+    lv_label_set_text(p->val, buf);
+  } else {
+    char buf[128];
+    strncpy(buf, p->enumlabels, sizeof(buf));
+    int idx = val;
+    char *w;
+    for(w = strtok(buf, ","); w != NULL && idx > 0; w = strtok(NULL, ","), idx--) {
+    }
+    if (w != NULL) { 
+      lv_label_set_text(p->val, w);
+    }
+  }
+}
+
+void btn_event_inc(lv_event_t *e) {
+  int dir = (int)lv_event_get_user_data(e);
+  if (selected_btn >= 0 && selected_btn < nr_rows)
+    param_increment(selected_btn, dir);
 }
 
 // create tunable parameter configuration tile 
@@ -322,49 +369,46 @@ void conf_menu_create(lv_obj_t *parent)
     set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)1);
   
-    uint32_t i;
-    for(i = 0; i < nr_rows; i++) {
-        uint8_t col = i % 3;
-        uint8_t row = i;
+    for(int i = 0; i < nr_rows; i++) {
+        ParamEntry *p = &rows[i];
 
         obj = lv_btn_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
-                             LV_GRID_ALIGN_STRETCH, row, 1);
+                             LV_GRID_ALIGN_STRETCH, i, 1);
         lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);
         set_btn_blue(obj);
         rows[i].sel = obj;
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,
-                             LV_GRID_ALIGN_END, row, 1);
-        lv_label_set_text_fmt(obj, "LABEL %d", row);
+                             LV_GRID_ALIGN_END, i, 1);
+        lv_label_set_text(obj, p->label);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-        //lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
-                             LV_GRID_ALIGN_END, row, 1);
-        lv_label_set_text_fmt(obj, "%d", row);
+                             LV_GRID_ALIGN_END, i, 1);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
         rows[i].val = obj;
+        rows[i].current = rows[i].def;                    
+        param_increment(i, 0);
     }
 }
 
 void tiles_create() { 
     lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
-   // lv_obj_add_style(tileview, &bgStyle, LV_PART_MAIN);
     lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-  //  lv_obj_add_event_cb(tileview, tileview_change_cb, LV_EVENT_VALUE_CHANGED, NULL);
-  //  lv_obj_add_event_cb(tileview, tileview_change_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
     lv_obj_t *t1 = lv_tileview_add_tile(tileview, 0, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
     lv_obj_t *t2 = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
     lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
 
-    //mon_menu_create(t1);
     conf_menu_create(t1);
-    //lv_btn_create(t3);
+    mon_menu_create(t2);
+    lv_btn_create(t3);
 }
 
 void setup() {
