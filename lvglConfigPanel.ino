@@ -258,8 +258,9 @@ class ConfPanel {
     int wrap;
     char enumlabels[32] = {0};
     float current;
+    bool selected = false;
   };
-  lv_obj_t *multBut;
+  lv_obj_t *multBut = NULL;
   //int nr_rows = 13;
   int selected_btn = -1;
   vector<ConfPanelParam> rows;
@@ -297,20 +298,29 @@ class ConfPanel {
 
   void selectButton(int idx) { 
     if (idx >= 0 && idx < rows.size()) { 
-      if (selected_btn >= 0 && selected_btn < rows.size()) { 
+      // configuration panel mode?  deselect prev selection if we're selecting a different param
+      if (isConfigPanel && selected_btn >= 0 && selected_btn < rows.size() && selected_btn != idx) { 
         set_btn_blue(rows[selected_btn].sel);
+        rows[selected_btn].selected = false;
       }
-      if (selected_btn == idx) { 
+      // toggle selected param 
+      if (rows[idx].selected == true) { 
         selected_btn = -1;
+        set_btn_blue(rows[idx].sel);
+        rows[idx].selected = false;
       } else { 
         selected_btn = idx;
-        set_btn_red(rows[selected_btn].sel);
+        set_btn_red(rows[idx].sel);
+        rows[idx].selected = true;
       }
     }   
     // reset multiplier button to 1X 
-    lv_obj_t *l = lv_obj_get_child(multBut, 0);
-    if (l != NULL)
-      lv_label_set_text(l, "1X");
+    if (multBut != NULL) { 
+
+      lv_obj_t *l = lv_obj_get_child(multBut, 0);
+      if (l != NULL)
+        lv_label_set_text(l, "1X");
+    }
   }
 
   void multiplierButton() {
@@ -333,14 +343,16 @@ class ConfPanel {
 
     ConfPanelParam *p = &rows[idx];
 
-    // get value of multiplier button 
-    lv_obj_t *l = lv_obj_get_child(multBut, 0);
-    if (l == NULL)
-      return;
-    const char *t = lv_label_get_text(l);
     int mult = 1;
-    if (t != NULL)
-      sscanf(t, "%dX", &mult);
+    if (multBut != NULL) { 
+      lv_obj_t *l = lv_obj_get_child(multBut, 0);
+      if (l == NULL)
+        return;
+      const char *t = lv_label_get_text(l);
+      int mult = 1;
+      if (t != NULL)
+        sscanf(t, "%dX", &mult);
+    }
 
     float val = p->current + p->inc * dir * mult;
     if (p->max > p->min) { 
@@ -374,7 +386,9 @@ class ConfPanel {
   static const int max_rows = 99;
   lv_coord_t col_dsc[4] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_coord_t row_dsc[max_rows];
-  
+
+  bool isConfigPanel = true;
+
   void conf_menu_create(lv_obj_t *parent)
   {
     for (int r = 0; r < rows.size(); r++) { 
@@ -382,48 +396,58 @@ class ConfPanel {
     }
     row_dsc[rows.size()] = LV_GRID_TEMPLATE_LAST;
 
-    /*Create a container with grid*/
-    lv_obj_t * cont = lv_obj_create(parent);
-    lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
-    lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
-    lv_obj_set_size(cont, LV_PCT(100), LV_PCT(80));
-    //lv_obj_center(cont);
-    lv_obj_set_layout(cont, LV_LAYOUT_GRID);
+    lv_obj_t *cont, *obj, *label; 
 
-    lv_obj_t * cont2 = lv_obj_create(parent);
-    lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(20));
-    lv_obj_align_to(cont2, cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    if (isConfigPanel) { 
+      /*Create a container with grid*/
+      cont = lv_obj_create(parent);
+      lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
+      lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
+      lv_obj_set_size(cont, LV_PCT(100), LV_PCT(80));
+      //lv_obj_center(cont);
+      lv_obj_set_layout(cont, LV_LAYOUT_GRID);
 
-    lv_obj_t * label;
-    lv_obj_t * obj;
+      lv_obj_t * cont2 = lv_obj_create(parent);
+      lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(20));
+      lv_obj_align_to(cont2, cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
 
-    obj = lv_btn_create(cont2);
-    label = lv_label_create(obj);
-    lv_label_set_text_fmt(label, "DECREASE");
-    lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_center(label);
-    lv_obj_align_to(obj, cont2, LV_ALIGN_LEFT_MID, 0, 0);
-    set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_dec, LV_EVENT_CLICKED, this);
+      obj = lv_btn_create(cont2);
+      label = lv_label_create(obj);
+      lv_label_set_text_fmt(label, "DECREASE");
+      lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_center(label);
+      lv_obj_align_to(obj, cont2, LV_ALIGN_LEFT_MID, 0, 0);
+      set_btn_blue(obj);
+      lv_obj_add_event_cb(obj, btn_event_dec, LV_EVENT_CLICKED, this);
 
-    obj = lv_btn_create(cont2);
-    label = lv_label_create(obj);
-    lv_label_set_text_fmt(label, "1X");
-    lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_center(label);
-    lv_obj_align_to(obj, cont2, LV_ALIGN_CENTER, 0, 0);
-    set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, this);
-    multBut = obj;
+      obj = lv_btn_create(cont2);
+      label = lv_label_create(obj);
+      lv_label_set_text_fmt(label, "1X");
+      lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_center(label);
+      lv_obj_align_to(obj, cont2, LV_ALIGN_CENTER, 0, 0);
+      set_btn_blue(obj);
+      lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, this);
+      multBut = obj;
 
-    obj = lv_btn_create(cont2);
-    label = lv_label_create(obj);
-    lv_label_set_text_fmt(label, "INCREASE");
-    lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_center(label);
-    lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
-    set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, this);
+      obj = lv_btn_create(cont2);
+      label = lv_label_create(obj);
+      lv_label_set_text_fmt(label, "INCREASE");
+      lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_center(label);
+      lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
+      set_btn_blue(obj);
+      lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, this);
+
+    } else { 
+      cont = lv_obj_create(parent);
+      lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
+      lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
+      lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
+      //lv_obj_center(cont);
+      lv_obj_set_layout(cont, LV_LAYOUT_GRID);  
+    }
+
   
     for(int i = 0; i < rows.size(); i++) {
       ConfPanelParam *p = &rows[i];
@@ -473,6 +497,13 @@ class ConfPanel {
   }
 };
 
+class DispPanel : public ConfPanel { 
+  public:
+    DispPanel(const char *conf) : ConfPanel(conf) { 
+      isConfigPanel = false; 
+    }
+};
+
 ConfPanel cp1( 
     "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
     "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
@@ -489,10 +520,17 @@ ConfPanel cp1(
     "I Max, %+5.2f, 0.001, 0, 0, 0.50, 0, none\n"
 );
 
-ConfPanel cp2(
+DispPanel cp2(
     "PID2 Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
     "P2 Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
     "I2 Gain, %+6.3f, 0.001, 0, 0, 0.002, 0, none\n"
+    "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
+    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
+    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
+    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
+    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
+    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
+    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
 );
 
 void tiles_create() { 
@@ -505,8 +543,7 @@ void tiles_create() {
     lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
 
     cp1.conf_menu_create(t1);
-    mon_menu_create(t2);
-    cp2.conf_menu_create(t3);
+    cp2.conf_menu_create(t2);
 }
 
 void setup() {
