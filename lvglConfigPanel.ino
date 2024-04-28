@@ -371,10 +371,12 @@ class ConfPanel {
     }
   }
 
+  static const int max_rows = 99;
+  lv_coord_t col_dsc[4] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_coord_t row_dsc[max_rows];
+  
   void conf_menu_create(lv_obj_t *parent)
   {
-    static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static lv_coord_t row_dsc[50];
     for (int r = 0; r < rows.size(); r++) { 
       row_dsc[r] = 50;
     }
@@ -471,8 +473,7 @@ class ConfPanel {
   }
 };
 
-
-const char *config = 
+ConfPanel cp1( 
     "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
     "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
     "Max Bank, %.1f,0.1,0,22,15,0,none\n"
@@ -485,9 +486,14 @@ const char *config =
     "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
     "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
     "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
-    "I Max, %+5.2f, 0.01, 0, 0, 0.50, 0, none\n";
+    "I Max, %+5.2f, 0.001, 0, 0, 0.50, 0, none\n";
+);
 
-ConfPanel cpX(config); 
+ConfPanel cp2(
+    "PID2 Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
+    "P2 Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
+    "I2 Gain, %+6.3f, 0.001, 0, 0, 0.002, 0, none\n"
+);
 
 void tiles_create() { 
     lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
@@ -498,9 +504,9 @@ void tiles_create() {
     lv_obj_t *t2 = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
     lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
 
-    cpX.conf_menu_create(t1);
+    cp1.conf_menu_create(t1);
     mon_menu_create(t2);
-    lv_btn_create(t3);
+    cp2.conf_menu_create(t3);
 }
 
 void setup() {
