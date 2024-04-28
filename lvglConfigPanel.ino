@@ -197,6 +197,7 @@ struct ParamEntry {
 
 lv_obj_t *multBut;
 
+
 void btn_event_1x(lv_event_t *e) {
   lv_obj_t *o = lv_event_get_target(e);
   lv_obj_t *l = lv_obj_get_child(o, 0);
@@ -212,28 +213,35 @@ void btn_event_1x(lv_event_t *e) {
   }
 }
 
+void set_btn_red(lv_obj_t *b) { 
+  static lv_style_t style_btn_red2;
+  lv_style_init(&style_btn_red2);
+  lv_style_set_bg_color(&style_btn_red2, lv_color_make(200, 0, 0));
+  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
+  lv_obj_add_style(b, &style_btn_red2, 0);
+}
+
+void set_btn_blue(lv_obj_t *b) { 
+  static lv_style_t style_btn_red2;
+  lv_style_init(&style_btn_red2);
+  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, 200));
+  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
+  lv_obj_add_style(b, &style_btn_red2, 0);
+}
+
+
 int selected_btn = -1;
 void btn_event_sel(lv_event_t *e) {
   int idx = (int)lv_event_get_user_data(e);
   if (idx >= 0 && idx < nr_rows) { 
     if (selected_btn >= 0 && selected_btn < nr_rows) { 
-      lv_obj_t *b = rows[selected_btn].sel;
-      static lv_style_t style_btn_red2;
-      lv_style_init(&style_btn_red2);
-      lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, 200));
-      lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
-      lv_obj_add_style(b, &style_btn_red2, 0);
+      set_btn_blue(rows[selected_btn].sel);
     }
     if (selected_btn == idx) { 
       selected_btn = -1;
     } else { 
       selected_btn = idx;
-      lv_obj_t *b = rows[selected_btn].sel;
-      static lv_style_t style_btn_red2;
-      lv_style_init(&style_btn_red2);
-      lv_style_set_bg_color(&style_btn_red2, lv_color_make(200, 0, 0));
-      lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
-      lv_obj_add_style(b, &style_btn_red2, 0);
+      set_btn_red(rows[selected_btn].sel);
     }
   }   
 }
@@ -292,6 +300,7 @@ void conf_menu_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_LEFT_MID, 0, 0);
+    set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)-1);
 
 
@@ -301,6 +310,7 @@ void conf_menu_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_CENTER, 0, 0);
+    set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, NULL);
     multBut = obj;
 
@@ -310,8 +320,9 @@ void conf_menu_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
+    set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)1);
-
+  
     uint32_t i;
     for(i = 0; i < nr_rows; i++) {
         uint8_t col = i % 3;
@@ -321,6 +332,7 @@ void conf_menu_create(lv_obj_t *parent)
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
                              LV_GRID_ALIGN_STRETCH, row, 1);
         lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);
+        set_btn_blue(obj);
         rows[i].sel = obj;
 
         obj = lv_label_create(cont);
