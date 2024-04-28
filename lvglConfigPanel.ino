@@ -133,7 +133,17 @@ void panel_setup() {
 // enable font in ~/Arduino/libraries/lvgl/lv_conf_template.h
 static const lv_font_t *default_font =  &lv_font_montserrat_42;
 
-// create first tile for monitoring selections 
+
+// callback for monitor value labels to toggle the adjoining checkbox 
+void select_monitor_event(lv_event_t *e) {
+  Serial.println("select_monitor_event()");
+  lv_obj_t *obj = (lv_obj_t *)lv_event_get_user_data(e);
+  if (lv_obj_has_state(obj, LV_STATE_CHECKED)) 
+    lv_obj_clear_state(obj, LV_STATE_CHECKED); /*Make the checkbox unchecked*/
+  else
+    lv_obj_add_state(obj, LV_STATE_CHECKED);   /*Make the checkbox checked*/
+}
+
 void mon_menu_create(lv_obj_t *parent)
 {
     static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
@@ -156,29 +166,31 @@ void mon_menu_create(lv_obj_t *parent)
     lv_obj_t * label;
     lv_obj_t * obj;
 
-    for(int i = 0; i < nr_rows; i++) {
-        uint8_t col = i % 3;
-        uint8_t row = i;
+    for(int row = 0; row < nr_rows; row++) {
+        //uint8_t col = i % 3;
+        //uint8_t row = i;
 
         obj = lv_checkbox_create(cont); // docs say style padding value can be used to make checkbox bigger
         lv_checkbox_set_text(obj, "");
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
                              LV_GRID_ALIGN_CENTER, row, 1);
-        //label = lv_label_create(obj);
-        //lv_label_set_text_fmt(label, "c%d, r%d", 0, row);
-        //lv_obj_center(label);
+        lv_obj_t *cb = obj;
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,
                              LV_GRID_ALIGN_END, row, 1);
         lv_label_set_text_fmt(obj, "DATAPOINT %d", row);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  // doesn't seem clickable 
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
                              LV_GRID_ALIGN_END, row, 1);
         lv_label_set_text_fmt(obj, "VAL%d", row);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  // doesn't seem clickable 
     }
 }
 
