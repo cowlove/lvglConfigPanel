@@ -89,24 +89,14 @@ void panel_setup() {
 #endif
 
 #if defined(ESP_PANEL_BOARD_ESP32_S3_LCD_EV_BOARD) || defined(ESP_PANEL_BOARD_ESP32_S3_KORVO_2)
-    /**
-     * These development boards require the use of an IO expander to configure the screen,
-     * so it needs to be initialized in advance and registered with the panel for use.
-     *
-     */
-    Serial.println("Initialize IO expander");
-    /* Initialize IO expander */
     ESP_IOExpander *expander = new ESP_IOExpander_TCA95xx_8bit(ESP_PANEL_LCD_TOUCH_BUS_HOST_ID, ESP_IO_EXPANDER_I2C_TCA9554_ADDRESS_000, ESP_PANEL_LCD_TOUCH_I2C_IO_SCL, ESP_PANEL_LCD_TOUCH_I2C_IO_SDA);
     expander->init();
     expander->begin();
-    /* Add into panel */
     panel->addIOExpander(expander);
 #endif
 
     panel->init();
 #if ESP_PANEL_LCD_BUS_TYPE != ESP_PANEL_BUS_TYPE_RGB
-    /* Register a function to notify LVGL when the panel is ready to flush */
-    /* This is useful for refreshing the screen using DMA transfers */
     panel->getLcd()->setCallback(notify_lvgl_flush_ready, &disp_drv);
 #endif
     panel->begin();
@@ -132,7 +122,6 @@ void panel_setup() {
 
 // enable font in ~/Arduino/libraries/lvgl/lv_conf_template.h
 static const lv_font_t *default_font =  &lv_font_montserrat_42;
-
 
 // callback for monitor value labels to toggle the adjoining checkbox 
 void select_monitor_event(lv_event_t *e) {
@@ -194,8 +183,8 @@ void mon_menu_create(lv_obj_t *parent)
     }
 }
 
-const static int nr_rowsNO = 20;
-struct ParamEntry {
+
+struct ConfPanelParam {
   lv_obj_t *sel;
   lv_obj_t *val;
   const char *label;
@@ -207,41 +196,7 @@ struct ParamEntry {
   bool wrap;
   const char *enumlabels;
   float current;
-} rowsNO[nr_rowsNO];
-
-lv_obj_t *multBut;
-
-ParamEntry rows[] = {
-  {NULL, NULL, "Navigation Mode", "%.0f", 1, 0, 0, 2, true, "HDG,NAV,LEVEL", 0},
-  {NULL, NULL, "Altitude", "%.0f'", 100, 7500, -1000, 18000, false, NULL, 0},
-  {NULL, NULL, "Max Bank", "%5.1f", 0.1, 15.5, 0, 22, false, NULL, 0},
-  {NULL, NULL, "Roll Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
-  {NULL, NULL, "Pitch Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
-  {NULL, NULL, "Pitch->Roll Coupling", "%+5.2f", 0.1, .03, -1, 1, false, NULL, 0},
-  {NULL, NULL, "Roll->Pitch Coupling", "%+5.2f", 0.1, .15, -1, 1, false, NULL, 0},
-  {NULL, NULL, "PID Select", "%.0f", 1, 0, 0, 4, true, "PITCH,ROLL,ALT,HDG,XTERR", 0},
-  {NULL, NULL, "P Gain", "%+5.2f", 0.01, 0.52, 0, 0, true, NULL, 0},
-  {NULL, NULL, "I Gain", "%+5.2f", 0.01, 0.001, 0, 0, true, NULL, 0},
-  {NULL, NULL, "I Max", "%+5.2f", 0.01, 0.5, 0, 0, true, NULL, 0},
-  {NULL, NULL, "D Gain", "%+5.2f", 0.01, 0.92, 0, 0, true, NULL, 0},
-  {NULL, NULL, "Final Gain", "%+5.2f", 0.01, 1.02, 0, 0, true, NULL, 0}
-
 };
-static const int nr_rows = sizeof(rows)/sizeof(rows[0]);
-
-void btn_event_1x(lv_event_t *e) {
-  lv_obj_t *l = lv_obj_get_child(multBut, 0);
-  if (l == NULL)
-    return;
-  Serial.printf("pressed\n");
-  const char *t = lv_label_get_text(l);
-  int v;
-  if (t != NULL && sscanf(t, "%dX", &v) == 1) { 
-    v *= 10;
-    if (v > 100) v = 1;
-    lv_label_set_text_fmt(l, "%dX", v);
-  }
-}
 
 void set_btn_red(lv_obj_t *b) { 
   static lv_style_t style_btn_red2;
@@ -259,81 +214,94 @@ void set_btn_blue(lv_obj_t *b) {
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
 
-int selected_btn = -1;
-void btn_event_sel(lv_event_t *e) {
-  int idx = (int)lv_event_get_user_data(e);
-  if (idx >= 0 && idx < nr_rows) { 
-    if (selected_btn >= 0 && selected_btn < nr_rows) { 
-      set_btn_blue(rows[selected_btn].sel);
+class ConfPanel { 
+  public:
+  lv_obj_t *multBut;
+  int nr_rows = 13;
+  int selected_btn = -1;
+  static ConfPanelParam rows[];
+  void selectButton(int idx) { 
+    if (idx >= 0 && idx < nr_rows) { 
+      if (selected_btn >= 0 && selected_btn < nr_rows) { 
+        set_btn_blue(rows[selected_btn].sel);
+      }
+      if (selected_btn == idx) { 
+        selected_btn = -1;
+      } else { 
+        selected_btn = idx;
+        set_btn_red(rows[selected_btn].sel);
+      }
+    }   
+    // reset multiplier button to 1X 
+    lv_obj_t *l = lv_obj_get_child(multBut, 0);
+    if (l != NULL)
+      lv_label_set_text(l, "1X");
+  }
+
+  void multiplierButton() {
+    lv_obj_t *l = lv_obj_get_child(multBut, 0);
+    if (l == NULL)
+      return;
+    Serial.printf("pressed\n");
+    const char *t = lv_label_get_text(l);
+    int v;
+    if (t != NULL && sscanf(t, "%dX", &v) == 1) { 
+      v *= 10;
+      if (v > 100) v = 1;
+      lv_label_set_text_fmt(l, "%dX", v);
     }
-    if (selected_btn == idx) { 
-      selected_btn = -1;
-    } else { 
-      selected_btn = idx;
-      set_btn_red(rows[selected_btn].sel);
+  }
+
+  void paramIncrement(int idx, float dir) { 
+    if (idx < 0 || idx >= nr_rows) 
+      return;
+
+    ConfPanelParam *p = &rows[idx];
+
+    // get value of multiplier button 
+    lv_obj_t *l = lv_obj_get_child(multBut, 0);
+    if (l == NULL)
+      return;
+    const char *t = lv_label_get_text(l);
+    int mult = 1;
+    if (t != NULL)
+      sscanf(t, "%dX", &mult);
+
+    float val = p->current + p->inc * dir * mult;
+    if (p->max > p->min) { 
+      if (p->wrap) { 
+        if (val > p->max) val = p->min;
+        if (val < p->min) val = p->max;
+      } else {
+        if (val > p->max) val = p->max;
+        if (val < p->min) val = p->min;
+      }
     }
-  }   
-  // reset multiplier button to 1X 
-  lv_obj_t *l = lv_obj_get_child(multBut, 0);
-  if (l != NULL)
-    lv_label_set_text(l, "1X");
-}
+    p->current = val;
 
-
-void param_increment(int idx, float dir) { 
-  ParamEntry *p = &rows[idx];
-
-  // get value of multiplier button 
-  lv_obj_t *l = lv_obj_get_child(multBut, 0);
-  if (l == NULL)
-    return;
-  const char *t = lv_label_get_text(l);
-  int mult = 1;
-  if (t != NULL)
-    sscanf(t, "%dX", &mult);
-
-  float val = p->current + p->inc * dir * mult;
-  if (p->max > p->min) { 
-    if (p->wrap) { 
-      if (val > p->max) val = p->min;
-      if (val < p->min) val = p->max;
+    if (p->enumlabels == NULL) { 
+      char buf[32];
+      snprintf(buf, sizeof(buf), p->fmt, val);
+      lv_label_set_text(p->val, buf);
     } else {
-      if (val > p->max) val = p->max;
-      if (val < p->min) val = p->min;
+      char buf[128];
+      strncpy(buf, p->enumlabels, sizeof(buf));
+      int idx = val;
+      char *w;
+      for(w = strtok(buf, ","); w != NULL && idx > 0; w = strtok(NULL, ","), idx--) {
+      }
+      if (w != NULL) { 
+        lv_label_set_text(p->val, w);
+      }
     }
   }
-  p->current = val;
 
-  if (p->enumlabels == NULL) { 
-    char buf[32];
-    snprintf(buf, sizeof(buf), p->fmt, val);
-    lv_label_set_text(p->val, buf);
-  } else {
-    char buf[128];
-    strncpy(buf, p->enumlabels, sizeof(buf));
-    int idx = val;
-    char *w;
-    for(w = strtok(buf, ","); w != NULL && idx > 0; w = strtok(NULL, ","), idx--) {
-    }
-    if (w != NULL) { 
-      lv_label_set_text(p->val, w);
-    }
-  }
-}
-
-void btn_event_inc(lv_event_t *e) {
-  int dir = (int)lv_event_get_user_data(e);
-  if (selected_btn >= 0 && selected_btn < nr_rows)
-    param_increment(selected_btn, dir);
-}
-
-// create tunable parameter configuration tile 
-void conf_menu_create(lv_obj_t *parent)
-{
+  void conf_menu_create(lv_obj_t *parent)
+  {
     static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static lv_coord_t row_dsc[50];
     for (int r = 0; r < nr_rows; r++) { 
-	     row_dsc[r] = 50;
+      row_dsc[r] = 50;
     }
     row_dsc[nr_rows] = LV_GRID_TEMPLATE_LAST;
 
@@ -361,7 +329,6 @@ void conf_menu_create(lv_obj_t *parent)
     set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)-1);
 
-
     obj = lv_btn_create(cont2);
     label = lv_label_create(obj);
     lv_label_set_text_fmt(label, "1X");
@@ -382,32 +349,65 @@ void conf_menu_create(lv_obj_t *parent)
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)1);
   
     for(int i = 0; i < nr_rows; i++) {
-        ParamEntry *p = &rows[i];
+      ConfPanelParam *p = &rows[i];
 
-        obj = lv_btn_create(cont);
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
-                             LV_GRID_ALIGN_STRETCH, i, 1);
-        lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);
-        set_btn_blue(obj);
-        rows[i].sel = obj;
+      obj = lv_btn_create(cont);
+      lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
+                          LV_GRID_ALIGN_STRETCH, i, 1);
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);
+      set_btn_blue(obj);
+      rows[i].sel = obj;
 
-        obj = lv_label_create(cont);
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,
-                             LV_GRID_ALIGN_END, i, 1);
-        lv_label_set_text(obj, p->label);
-        lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
+      obj = lv_label_create(cont);
+      lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,
+                          LV_GRID_ALIGN_END, i, 1);
+      lv_label_set_text(obj, p->label);
+      lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
 
-        obj = lv_label_create(cont);
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
-                             LV_GRID_ALIGN_END, i, 1);
-        lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-        rows[i].val = obj;
-        rows[i].current = rows[i].def;                    
-        param_increment(i, 0);
+      obj = lv_label_create(cont);
+      lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
+                          LV_GRID_ALIGN_END, i, 1);
+      lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      rows[i].val = obj;
+      rows[i].current = rows[i].def;                    
+      paramIncrement(i, 0);
     }
+  }
+} cp;
+
+ConfPanelParam ConfPanel::rows[] = {
+    {NULL, NULL, "Navigation Mode", "%.0f", 1, 0, 0, 2, true, "HDG,NAV,LEVEL", 0},
+    {NULL, NULL, "Altitude", "%.0f'", 100, 7500, -1000, 18000, false, NULL, 0},
+    {NULL, NULL, "Max Bank", "%5.1f", 0.1, 15.5, 0, 22, false, NULL, 0},
+    {NULL, NULL, "Roll Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
+    {NULL, NULL, "Pitch Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
+    {NULL, NULL, "Pitch->Roll Coupling", "%+5.2f", 0.1, .03, -1, 1, false, NULL, 0},
+    {NULL, NULL, "Roll->Pitch Coupling", "%+5.2f", 0.1, .15, -1, 1, false, NULL, 0},
+    {NULL, NULL, "PID Select", "%.0f", 1, 0, 0, 4, true, "PITCH,ROLL,ALT,HDG,XTERR", 0},
+    {NULL, NULL, "P Gain", "%+5.2f", 0.01, 0.52, 0, 0, true, NULL, 0},
+    {NULL, NULL, "I Gain", "%+5.2f", 0.01, 0.001, 0, 0, true, NULL, 0},
+    {NULL, NULL, "I Max", "%+5.2f", 0.01, 0.5, 0, 0, true, NULL, 0},
+    {NULL, NULL, "D Gain", "%+5.2f", 0.01, 0.92, 0, 0, true, NULL, 0},
+    {NULL, NULL, "Final Gain", "%+5.2f", 0.01, 1.02, 0, 0, true, NULL, 0}
+  };
+
+
+void btn_event_1x(lv_event_t *e) {
+  cp.multiplierButton();
 }
+
+void btn_event_sel(lv_event_t *e) {
+  int idx = (int)lv_event_get_user_data(e);
+  cp.selectButton(idx);
+}
+
+void btn_event_inc(lv_event_t *e) {
+  int dir = (int)lv_event_get_user_data(e);
+  cp.paramIncrement(cp.selected_btn, dir);
+}
+
 
 void tiles_create() { 
     lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
@@ -418,7 +418,7 @@ void tiles_create() {
     lv_obj_t *t2 = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
     lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
 
-    conf_menu_create(t1);
+    cp.conf_menu_create(t1);
     mon_menu_create(t2);
     lv_btn_create(t3);
 }
