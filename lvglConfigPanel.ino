@@ -171,7 +171,7 @@ void mon_menu_create(lv_obj_t *parent)
         lv_label_set_text_fmt(obj, "DATAPOINT %d", row);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  // doesn't seem clickable 
+        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  
 
         obj = lv_label_create(cont);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
@@ -179,24 +179,10 @@ void mon_menu_create(lv_obj_t *parent)
         lv_label_set_text_fmt(obj, "VAL%d", row);
         lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  // doesn't seem clickable 
+        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  
     }
 }
 
-
-struct ConfPanelParam {
-  lv_obj_t *sel;
-  lv_obj_t *val;
-  const char *label;
-  const char *fmt;
-  float inc;
-  float def;
-  float min;
-  float max;
-  bool wrap;
-  const char *enumlabels;
-  float current;
-};
 
 void set_btn_red(lv_obj_t *b) { 
   static lv_style_t style_btn_red2;
@@ -214,15 +200,113 @@ void set_btn_blue(lv_obj_t *b) {
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
 
+#include <vector>
+#include <string>;
+using namespace std;
+
+#include <algorithm> 
+#include <functional> 
+#include <cctype>
+#include <locale>
+
+// trim from start
+inline std::string &ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
+}
+
+// trim from end
+inline std::string &rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    return s;
+}
+
+// trim from both ends
+inline std::string &trim(std::string &s) {
+    return ltrim(rtrim(s));
+}
+
+vector<string> split(const char *line, const char *delim) {
+  char *buf = strdup(line); 
+  std::vector<string> rval;
+  for(char *w = strtok(buf, delim); w != NULL; w = strtok(NULL, delim)) {
+    string ws(w);
+    trim(ws);
+    rval.push_back(ws);
+  }
+  free(buf);
+  return rval;
+}
+
 class ConfPanel { 
+  struct ConfPanelParam {
+    lv_obj_t *sel;
+    lv_obj_t *val;
+    char label[32] = {0};
+    char fmt[32] = {0};
+    float inc;
+    float def;
+    float min;
+    float max;
+    int wrap;
+    char enumlabels[32] = {0};
+    float current;
+  };
   public:
   lv_obj_t *multBut;
-  int nr_rows = 13;
+  //int nr_rows = 13;
   int selected_btn = -1;
-  static ConfPanelParam rows[];
+  vector<ConfPanelParam> rows;
+
+  void addConfig(const char *buf) { 
+    vector<string> words = split(buf, ",");
+    if (words.size() == 8) { 
+      ConfPanelParam n;
+      strncpy(n.label, words[0].c_str(), sizeof(n.label));
+      strncpy(n.fmt, words[1].c_str(), sizeof(n.fmt));
+      sscanf(words[2].c_str(), "%f", &n.inc);
+      sscanf(words[3].c_str(), "%f", &n.min);
+      sscanf(words[4].c_str(), "%f", &n.max);
+      sscanf(words[5].c_str(), "%f", &n.def);
+      sscanf(words[6].c_str(), "%f", &n.wrap);
+      strncpy(n.enumlabels, words[7].c_str(), sizeof(n.enumlabels));
+      if (strchr(n.enumlabels,'/') != NULL) { 
+        n.inc = 1;
+        n.min = 0;
+        n.max = split(n.enumlabels,"/").size() - 1;
+      }
+      n.current = n.def;
+      rows.push_back(n);
+    }
+  }
+
+  void parseConfigLines() { 
+    const char *config = 
+      "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
+      "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
+      "Max Bank, %.1f,0.1,0,22,15,0,none\n"
+      "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
+      "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
+      "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
+      "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
+      "PID Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
+      "P Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
+      "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
+      "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
+      "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
+      "I Max, %+5.2f, 0.01, 0, 0, 0.50, 0, none\n";
+
+    vector<string> lines = split(config, "\n");
+    for(auto l = lines.begin(); l != lines.end(); l++) {
+      addConfig((*l).c_str());
+    }
+  }
+
   void selectButton(int idx) { 
-    if (idx >= 0 && idx < nr_rows) { 
-      if (selected_btn >= 0 && selected_btn < nr_rows) { 
+    if (idx >= 0 && idx < rows.size()) { 
+      if (selected_btn >= 0 && selected_btn < rows.size()) { 
         set_btn_blue(rows[selected_btn].sel);
       }
       if (selected_btn == idx) { 
@@ -253,7 +337,7 @@ class ConfPanel {
   }
 
   void paramIncrement(int idx, float dir) { 
-    if (idx < 0 || idx >= nr_rows) 
+    if (idx < 0 || idx >= rows.size()) 
       return;
 
     ConfPanelParam *p = &rows[idx];
@@ -279,7 +363,7 @@ class ConfPanel {
     }
     p->current = val;
 
-    if (p->enumlabels == NULL) { 
+    if (strchr(p->enumlabels, '/') == NULL) { 
       char buf[32];
       snprintf(buf, sizeof(buf), p->fmt, val);
       lv_label_set_text(p->val, buf);
@@ -288,7 +372,7 @@ class ConfPanel {
       strncpy(buf, p->enumlabels, sizeof(buf));
       int idx = val;
       char *w;
-      for(w = strtok(buf, ","); w != NULL && idx > 0; w = strtok(NULL, ","), idx--) {
+      for(w = strtok(buf, "/"); w != NULL && idx > 0; w = strtok(NULL, "/"), idx--) {
       }
       if (w != NULL) { 
         lv_label_set_text(p->val, w);
@@ -298,12 +382,14 @@ class ConfPanel {
 
   void conf_menu_create(lv_obj_t *parent)
   {
+    parseConfigLines();
+
     static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static lv_coord_t row_dsc[50];
-    for (int r = 0; r < nr_rows; r++) { 
+    for (int r = 0; r < rows.size(); r++) { 
       row_dsc[r] = 50;
     }
-    row_dsc[nr_rows] = LV_GRID_TEMPLATE_LAST;
+    row_dsc[rows.size()] = LV_GRID_TEMPLATE_LAST;
 
     /*Create a container with grid*/
     lv_obj_t * cont = lv_obj_create(parent);
@@ -348,7 +434,7 @@ class ConfPanel {
     set_btn_blue(obj);
     lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)1);
   
-    for(int i = 0; i < nr_rows; i++) {
+    for(int i = 0; i < rows.size(); i++) {
       ConfPanelParam *p = &rows[i];
 
       obj = lv_btn_create(cont);
@@ -364,7 +450,7 @@ class ConfPanel {
       lv_label_set_text(obj, p->label);
       lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  // doesn't seem clickable 
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  
 
       obj = lv_label_create(cont);
       lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
@@ -376,22 +462,6 @@ class ConfPanel {
     }
   }
 } cp;
-
-ConfPanelParam ConfPanel::rows[] = {
-    {NULL, NULL, "Navigation Mode", "%.0f", 1, 0, 0, 2, true, "HDG,NAV,LEVEL", 0},
-    {NULL, NULL, "Altitude", "%.0f'", 100, 7500, -1000, 18000, false, NULL, 0},
-    {NULL, NULL, "Max Bank", "%5.1f", 0.1, 15.5, 0, 22, false, NULL, 0},
-    {NULL, NULL, "Roll Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
-    {NULL, NULL, "Pitch Trim", "%+5.2f", 0.1, 0, -1, 1, false, NULL, 0},
-    {NULL, NULL, "Pitch->Roll Coupling", "%+5.2f", 0.1, .03, -1, 1, false, NULL, 0},
-    {NULL, NULL, "Roll->Pitch Coupling", "%+5.2f", 0.1, .15, -1, 1, false, NULL, 0},
-    {NULL, NULL, "PID Select", "%.0f", 1, 0, 0, 4, true, "PITCH,ROLL,ALT,HDG,XTERR", 0},
-    {NULL, NULL, "P Gain", "%+5.2f", 0.01, 0.52, 0, 0, true, NULL, 0},
-    {NULL, NULL, "I Gain", "%+5.2f", 0.01, 0.001, 0, 0, true, NULL, 0},
-    {NULL, NULL, "I Max", "%+5.2f", 0.01, 0.5, 0, 0, true, NULL, 0},
-    {NULL, NULL, "D Gain", "%+5.2f", 0.01, 0.92, 0, 0, true, NULL, 0},
-    {NULL, NULL, "Final Gain", "%+5.2f", 0.01, 1.02, 0, 0, true, NULL, 0}
-  };
 
 
 void btn_event_1x(lv_event_t *e) {
@@ -407,7 +477,6 @@ void btn_event_inc(lv_event_t *e) {
   int dir = (int)lv_event_get_user_data(e);
   cp.paramIncrement(cp.selected_btn, dir);
 }
-
 
 void tiles_create() { 
     lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
@@ -433,5 +502,5 @@ void setup() {
 void loop(){
     //Serial.println("Loop");
     lv_timer_handler();
-    delay(2);
+    yield();
 }
