@@ -486,7 +486,7 @@ ConfPanel cp1(
     "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
     "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
     "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
-    "I Max, %+5.2f, 0.001, 0, 0, 0.50, 0, none\n";
+    "I Max, %+5.2f, 0.001, 0, 0, 0.50, 0, none\n"
 );
 
 ConfPanel cp2(
