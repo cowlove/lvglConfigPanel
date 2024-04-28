@@ -241,7 +241,12 @@ vector<string> split(const char *line, const char *delim) {
 }
 
 class ConfPanel { 
+  public:
+  ConfPanel(const char *cfg) { parseConfig(cfg);} 
+  ConfPanel() {}
   struct ConfPanelParam {
+    ConfPanel *parent;
+    int index;
     lv_obj_t *sel;
     lv_obj_t *val;
     char label[32] = {0};
@@ -254,7 +259,6 @@ class ConfPanel {
     char enumlabels[32] = {0};
     float current;
   };
-  public:
   lv_obj_t *multBut;
   //int nr_rows = 13;
   int selected_btn = -1;
@@ -278,26 +282,13 @@ class ConfPanel {
         n.max = split(n.enumlabels,"/").size() - 1;
       }
       n.current = n.def;
+      n.parent = this;
+      n.index = rows.size();
       rows.push_back(n);
     }
   }
 
-  void parseConfigLines() { 
-    const char *config = 
-      "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
-      "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
-      "Max Bank, %.1f,0.1,0,22,15,0,none\n"
-      "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
-      "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
-      "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
-      "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
-      "PID Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
-      "P Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
-      "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
-      "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
-      "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
-      "I Max, %+5.2f, 0.01, 0, 0, 0.50, 0, none\n";
-
+  void parseConfig(const char *config) { 
     vector<string> lines = split(config, "\n");
     for(auto l = lines.begin(); l != lines.end(); l++) {
       addConfig((*l).c_str());
@@ -382,8 +373,6 @@ class ConfPanel {
 
   void conf_menu_create(lv_obj_t *parent)
   {
-    parseConfigLines();
-
     static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static lv_coord_t row_dsc[50];
     for (int r = 0; r < rows.size(); r++) { 
@@ -413,7 +402,7 @@ class ConfPanel {
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_LEFT_MID, 0, 0);
     set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)-1);
+    lv_obj_add_event_cb(obj, btn_event_dec, LV_EVENT_CLICKED, this);
 
     obj = lv_btn_create(cont2);
     label = lv_label_create(obj);
@@ -422,7 +411,7 @@ class ConfPanel {
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_CENTER, 0, 0);
     set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, this);
     multBut = obj;
 
     obj = lv_btn_create(cont2);
@@ -432,7 +421,7 @@ class ConfPanel {
     lv_obj_center(label);
     lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
     set_btn_blue(obj);
-    lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, (void *)1);
+    lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, this);
   
     for(int i = 0; i < rows.size(); i++) {
       ConfPanelParam *p = &rows[i];
@@ -440,7 +429,7 @@ class ConfPanel {
       obj = lv_btn_create(cont);
       lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
                           LV_GRID_ALIGN_STRETCH, i, 1);
-      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, &rows[i]);
       set_btn_blue(obj);
       rows[i].sel = obj;
 
@@ -450,7 +439,7 @@ class ConfPanel {
       lv_label_set_text(obj, p->label);
       lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, (void *)i);  
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, &rows[i]);  
 
       obj = lv_label_create(cont);
       lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
@@ -461,22 +450,44 @@ class ConfPanel {
       paramIncrement(i, 0);
     }
   }
-} cp;
+  static void btn_event_1x(lv_event_t *e) {
+    ConfPanel *cp = (ConfPanel *)lv_event_get_user_data(e);
+    cp->multiplierButton();
+  }
+
+  static void btn_event_sel(lv_event_t *e) {
+    ConfPanel::ConfPanelParam *p = (ConfPanel::ConfPanelParam *)lv_event_get_user_data(e);
+    p->parent->selectButton(p->index);
+  }
+
+  static void btn_event_inc(lv_event_t *e) {
+    ConfPanel *cp = (ConfPanel *)lv_event_get_user_data(e);
+    cp->paramIncrement(cp->selected_btn, +1);
+  }
+
+  static void btn_event_dec(lv_event_t *e) {
+    ConfPanel *cp = (ConfPanel *)lv_event_get_user_data(e);
+    cp->paramIncrement(cp->selected_btn, -1);
+  }
+};
 
 
-void btn_event_1x(lv_event_t *e) {
-  cp.multiplierButton();
-}
+const char *config = 
+    "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
+    "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
+    "Max Bank, %.1f,0.1,0,22,15,0,none\n"
+    "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
+    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
+    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
+    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
+    "PID Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
+    "P Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
+    "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
+    "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
+    "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
+    "I Max, %+5.2f, 0.01, 0, 0, 0.50, 0, none\n";
 
-void btn_event_sel(lv_event_t *e) {
-  int idx = (int)lv_event_get_user_data(e);
-  cp.selectButton(idx);
-}
-
-void btn_event_inc(lv_event_t *e) {
-  int dir = (int)lv_event_get_user_data(e);
-  cp.paramIncrement(cp.selected_btn, dir);
-}
+ConfPanel cpX(config); 
 
 void tiles_create() { 
     lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
@@ -487,7 +498,7 @@ void tiles_create() {
     lv_obj_t *t2 = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
     lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
 
-    cp.conf_menu_create(t1);
+    cpX.conf_menu_create(t1);
     mon_menu_create(t2);
     lv_btn_create(t3);
 }
