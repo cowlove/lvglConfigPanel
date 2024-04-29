@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <lvgl.h>
-#include "Client.h"
+#include "WiFiClient.h"
 
 #define WAVESHARE // use to switch between WaveShare4.3 and LilyGO T-RGB 2.1
 
@@ -193,10 +193,17 @@ void set_btn_red(lv_obj_t *b) {
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
 
-void set_btn_blue(lv_obj_t *b, int blue = 200) { 
+void set_btn_blue(lv_obj_t *b) { 
   static lv_style_t style_btn_red2;
   lv_style_init(&style_btn_red2);
-  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, blue));
+  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, 200));
+  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
+  lv_obj_add_style(b, &style_btn_red2, 0);
+}
+void set_btn_blue2(lv_obj_t *b) { 
+  static lv_style_t style_btn_red2;
+  lv_style_init(&style_btn_red2);
+  lv_style_set_bg_color(&style_btn_red2, lv_color_make(150, 150, 220));
   lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
@@ -362,7 +369,7 @@ class ConfPanel {
       if (toggle = !toggle) {
         set_btn_blue(multBut);
       } else {
-        set_btn_blue(multBut, 150);
+        set_btn_blue2(multBut);
       }
     }
   }
@@ -556,24 +563,6 @@ JStuff j;
 WiFiClient tcpClient;
 //WiFiUDP udp;
 
-#if 0 
-static void handleError(void* arg, AsyncClient* client, uint8_t e) {
-  Serial.printf("handleError() %lx %s\n", (long)client, client->errorToString(e));
-}
-static void handleTimeout(void* arg, AsyncClient* client, uint32_t t) {
-  Serial.printf("handleTimeout() %lx\n", (long)client);
-}
-void processData(const char *, int );
-static void handleData(void* arg, AsyncClient* client, void *data, size_t len) {
-	Serial.printf("Got %d bytes: %s\n", len);
-  processData((const char *)data, len);
-}
-static void handleNewClient(void* arg, AsyncClient* client) {
-  client->onData(&handleData, NULL);
-  Serial.printf("handleNewClient() %lx\n", (long)client);
-}
-#endif 
-
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
@@ -627,7 +616,10 @@ void loop() {
     }
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
-    delay(2);
+    delay(1);
+
+    //if (panels.size() > 0)
+    //    return; 
 
     string s;
     for (auto p : panels) 
@@ -663,7 +655,9 @@ void loop() {
         Serial.printf("read %d %d\n", n, (int)millis());
         processData(buf, n);
         tcpTimeout = 0;
-    }
+        s = "ACK\n";
+        tcpClient.write(s.c_str(), s.length());
+     }
     if(j.hz(1) && tcpTimeout++ > 3) { 
       Serial.printf("tcpTimeout\n");
       tcpClient.stop();
