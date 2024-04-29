@@ -535,142 +535,7 @@ class DispPanel : public ConfPanel {
     }
 };
 
-
-/////////////////////////////////////
-// CLIENT CODE
-
-class ConfPanelParam; 
-class ConfPanelClient {
-  public:
-  int index;
-  bool schemaRequested = false;
-  vector <ConfPanelParam *> params;
-  ConfPanelClient(int i) : index(i) {}
-  
-  int attach(ConfPanelParam *p) { 
-    params.push_back(p);
-    return params.size() - 1;
-  } 
-  inline string schema();
-  inline string values();
-  inline void onRecv(const string &);
-  inline string readData(); 
-};
-
-class ConfPanelParam {
-  float inc, min, max, lastValue;
-  float *ptr;
-  bool wrap;
-  string label, fmt, enumlist;
-  int index;
-  ConfPanelClient *owner;
-  public:
-  ConfPanelParam(ConfPanelClient *o, float *p, const char *l, const char *f, float i = 1, float mi = 0, float ma = 0, bool w = false, const char *el = "none") 
-    : owner(o), ptr(p), inc(i), min(mi), max(ma), wrap(w) {
-      enumlist = el;
-      label = l;
-      fmt = f; 
-      index = owner->attach(this);
-      lastValue = *ptr;
-  }
-  string schemaString() { 
-    char buf[256];
-    snprintf(buf, sizeof(buf), "%s, %s, %f, %f, %f, %f, %d, %s", label.c_str(), fmt.c_str(), inc, min, max, *ptr, (int)wrap, enumlist.c_str());
-    return string(buf);
-  }
-  string valueString() { 
-    char buf[256];
-    snprintf(buf, sizeof(buf), "VALUE %d %d %f", owner->index, index, *ptr);
-    return string(buf);
-  }
-  string readData() { 
-    if (*ptr != lastValue) { 
-      lastValue = *ptr;
-      return valueString();
-    } 
-    return "";
-  }
-  void set(float f) {
-    lastValue = *ptr = f;
-  }
-
-};
-
-inline string ConfPanelClient::schema() {
-  char buf[32];
-  snprintf(buf, sizeof(buf), "SCHEMA %d\n", index); 
-  string rval = buf;
-  for(auto i = params.begin(); i != params.end(); i++) { 
-    rval += (*i)->schemaString() + "\n";
-  }
-  return rval + "END\n";
-}
-  
-inline string ConfPanelClient::values() { 
-  string rval;
-  for(auto i = params.begin(); i != params.end(); i++) { 
-    rval += (*i)->valueString() + "\n";
-  }
-  return rval;
-}
-
-inline string ConfPanelClient::readData() { 
-  string rval;
-  if (schemaRequested) {
-    schemaRequested = false;
-    rval += schema();
-  }
-  for(auto i = params.begin(); i != params.end(); i++) { 
-    string s = (*i)->readData();
-    if (s.length() > 0)
-      rval += s + "\n";
-  }
-  //Serial.printf("client %d read %s\n", index, rval.c_str());
-  return rval;
-}
-
-inline void ConfPanelClient::onRecv(const string &buf) { 
-  vector<string> lines = split(buf.c_str(), "\n");
-  for(string s : lines) {
-    int i1, i2;
-    float v;
-    //Serial.printf("client %d recv %s\n", index, s.c_str());
-    if (sscanf(s.c_str(), "SET %d %d %f", &i1, &i2, &v) == 3 && i1 == index && i2 >= 0 && i2 < params.size()) {
-      params[i2]->set(v); 
-    }
-    if (strcmp(s.c_str(), "SCHEMA") == 0) {
-      schemaRequested = true; 
-    }
-  }
-}
-
-class ConfPanelParamFloat : public ConfPanelParam { 
-public:
-  ConfPanelParamFloat(ConfPanelClient *o, float *ptr, const char *l, float i = 1,const char *f = "%.1f", float mi = 0, float ma = 0, bool w = false) : ConfPanelParam(o, ptr, l, f, i, mi, ma, w) {}
-};
-class ConfPanelParamEnum : public ConfPanelParam { 
-public:
-  ConfPanelParamEnum(ConfPanelClient *o, float *ptr, const char *l, const char *en, bool w = false) : ConfPanelParam(o, ptr, l, "none", 1, 0, 0, w, en) {}
-};
-
-float setTempA = 106.1, setTempB = 0, setTempC = 10, enumB = 2, counter = 0, counterMode = 3, abLock = 0;
-ConfPanelClient cpc(0);
-ConfPanelParamFloat p1(&cpc, &setTempA, "Set Temp A", 0.1);
-ConfPanelParamFloat p5(&cpc, &setTempB, "Set Temp B", 0.1);
-ConfPanelParamEnum p2(&cpc, &enumB, "Mode", "AUTO/MANUAL/OFF");
-ConfPanelParamFloat p3(&cpc, &counter, "Counter", 0.1);
-ConfPanelParamEnum p4(&cpc, &counterMode, "Counter Mode", "UP/DOWN/OFF");
-ConfPanelParamEnum p6(&cpc, &abLock, "A/B Locked", "OFF/ON");
-//ConfPanelParamFloat p7(&cpc, &panelComm.to, "Comm To");
-//ConfPanelParamFloat p8(&cpc, &panelComm.from, "Comm From");
-
-ConfPanelClient cpc1(1);
-ConfPanelParamFloat p9(&cpc1, &setTempC, "Set Temp C", 0.1);
-
-
 vector <ConfPanel *> panels;
-
-vector <ConfPanelClient *> clients;
 
 #define GIT_VERSION "gitversion"
 #include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
@@ -683,10 +548,6 @@ void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
     Serial.println("Setup done");
-    clients.push_back(&cpc);
-    clients.push_back(&cpc1);
-    for (auto c : clients) 
-      c->onRecv("SCHEMA\n");
     j.run();
     udp.begin(4444);
 }
@@ -701,12 +562,6 @@ void loop() {
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
     delay(1);
-    if (counterMode == 0) 
-      counter += 1;
-    if (counterMode == 1)
-      counter -= 1;
-    if (abLock) 
-      setTempB = setTempA; 
 
     string s;
     for (auto p : panels) 
