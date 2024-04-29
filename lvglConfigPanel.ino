@@ -2,11 +2,16 @@
 #include <lvgl.h>
 #include "WiFiClient.h"
 
+// needs lvgl library version 8.3.11
+// needs ESP32_Display_Panel version 0.0.2
+// check Arduino/libraries/lv_conf.h for fonts
+
 #define WAVESHARE // use to switch between WaveShare4.3 and LilyGO T-RGB 2.1
 
 #ifdef WAVESHARE
 #include <ESP_Panel_Library.h>
 #include <ESP_IOExpander_Library.h>
+//#undef ESP_PANEL_USE_LCD_TOUCH
 
 /* LVGL porting configurations */
 #define LVGL_TICK_PERIOD_MS     (2)
@@ -104,8 +109,9 @@ void panel_setup() {
 }
 #else // #ifdef WAVESHARE
 
-#include <LilyGo_RGBPanel.h>
-#include <LV_Helper.h>
+// tmp debugging Makefile build problems 
+//#include <LilyGo_RGBPanel.h>
+//#include <LV_Helper.h>
 
 LilyGo_RGBPanel panel;
 
@@ -121,92 +127,9 @@ void panel_setup() {
 }
 #endif
 
-// enable font in ~/Arduino/libraries/lvgl/lv_conf_template.h
-static const lv_font_t *default_font =  &lv_font_montserrat_42;
+// enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
 
-// callback for monitor value labels to toggle the adjoining checkbox 
-void select_monitor_event(lv_event_t *e) {
-  Serial.println("select_monitor_event()");
-  lv_obj_t *obj = (lv_obj_t *)lv_event_get_user_data(e);
-  if (lv_obj_has_state(obj, LV_STATE_CHECKED)) 
-    lv_obj_clear_state(obj, LV_STATE_CHECKED); /*Make the checkbox unchecked*/
-  else
-    lv_obj_add_state(obj, LV_STATE_CHECKED);   /*Make the checkbox checked*/
-}
-
-void mon_menu_create(lv_obj_t *parent)
-{
-    static lv_coord_t col_dsc[] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static lv_coord_t row_dsc[50];
-
-    int nr_rows = 20;
-    for (int r = 0; r < nr_rows; r++) { 
-	     row_dsc[r] = 50;
-    }
-    row_dsc[nr_rows] = LV_GRID_TEMPLATE_LAST;
-
-    /*Create a container with grid*/
-    lv_obj_t * cont = lv_obj_create(parent);
-    lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
-    lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
-    lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-    //lv_obj_center(cont);
-    lv_obj_set_layout(cont, LV_LAYOUT_GRID);  
-
-    lv_obj_t * label;
-    lv_obj_t * obj;
-
-    for(int row = 0; row < nr_rows; row++) {
-        //uint8_t col = i % 3;
-        //uint8_t row = i;
-
-        obj = lv_checkbox_create(cont); // docs say style padding value can be used to make checkbox bigger
-        lv_checkbox_set_text(obj, "");
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
-                             LV_GRID_ALIGN_CENTER, row, 1);
-        lv_obj_t *cb = obj;
-
-        obj = lv_label_create(cont);
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 1, 1,
-                             LV_GRID_ALIGN_END, row, 1);
-        lv_label_set_text_fmt(obj, "DATAPOINT %d", row);
-        lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  
-
-        obj = lv_label_create(cont);
-        lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
-                             LV_GRID_ALIGN_END, row, 1);
-        lv_label_set_text_fmt(obj, "VAL%d", row);
-        lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(obj, select_monitor_event, LV_EVENT_CLICKED, (void *)cb);  
-    }
-}
-
-
-void set_btn_red(lv_obj_t *b) { 
-  static lv_style_t style_btn_red2;
-  lv_style_init(&style_btn_red2);
-  lv_style_set_bg_color(&style_btn_red2, lv_color_make(200, 0, 0));
-  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
-  lv_obj_add_style(b, &style_btn_red2, 0);
-}
-
-void set_btn_blue(lv_obj_t *b) { 
-  static lv_style_t style_btn_red2;
-  lv_style_init(&style_btn_red2);
-  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, 200));
-  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
-  lv_obj_add_style(b, &style_btn_red2, 0);
-}
-void set_btn_blue2(lv_obj_t *b) { 
-  static lv_style_t style_btn_red2;
-  lv_style_init(&style_btn_red2);
-  lv_style_set_bg_color(&style_btn_red2, lv_color_make(150, 150, 220));
-  lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
-  lv_obj_add_style(b, &style_btn_red2, 0);
-}
+static const lv_font_t *default_font =  &lv_font_montserrat_36;
 
 #include <vector>
 #include <string>;
@@ -274,11 +197,26 @@ class ConfPanel {
     bool selected = false;
     bool changed = false;
   };
-  lv_obj_t *multBut = NULL;
   //int nr_rows = 13;
   int selected_btn = -1;
   vector<ConfPanelParam> rows;
 
+  lv_obj_t *multBut = NULL;
+  void heartbeat(bool reset) { 
+    if (multBut == NULL) 
+      return;
+    if (reset) { 
+       lv_obj_set_style_bg_color(multBut, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
+    } else {
+      lv_color_t c = lv_obj_get_style_bg_color(multBut, LV_PART_MAIN);
+      c = lv_color_lighten(c, 13);
+      lv_obj_set_style_bg_color(multBut, c, LV_PART_MAIN);
+    }
+  }
+  
+  void run() { 
+    heartbeat(false);
+  }
   void addConfig(const char *buf) { 
     vector<string> words = split(buf, ",");
     if (words.size() == 8) { 
@@ -314,17 +252,17 @@ class ConfPanel {
     if (idx >= 0 && idx < rows.size()) { 
       // configuration panel mode?  deselect prev selection if we're selecting a different param
       if (isConfigPanel && selected_btn >= 0 && selected_btn < rows.size() && selected_btn != idx) { 
-        set_btn_blue(rows[selected_btn].sel);
+        lv_obj_set_style_bg_color(rows[selected_btn].sel, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
         rows[selected_btn].selected = false;
       }
       // toggle selected param 
       if (rows[idx].selected == true) { 
         selected_btn = -1;
-        set_btn_blue(rows[idx].sel);
+        lv_obj_set_style_bg_color(rows[idx].sel, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
         rows[idx].selected = false;
       } else { 
         selected_btn = idx;
-        set_btn_red(rows[idx].sel);
+        lv_obj_set_style_bg_color(rows[idx].sel, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
         rows[idx].selected = true;
       }
     }   
@@ -351,9 +289,8 @@ class ConfPanel {
     }
   }
 
-  bool toggle = false;
   void onRecv(const string &buf) {
-    Serial.printf("processing line: %s\n", buf.c_str());
+    //Serial.printf("processing line: %s\n", buf.c_str());
     vector<string> lines = split(buf.c_str(), "\n");
     for(string s : lines) {
       //Serial.printf("processing line: %s\n", s.c_str());
@@ -365,14 +302,10 @@ class ConfPanel {
         paramIncrement(i2, 0);
       }
     }
-    if (multBut != NULL) { 
-      if (toggle = !toggle) {
-        set_btn_blue(multBut);
-      } else {
-        set_btn_blue2(multBut);
-      }
-    }
+    if (buf.length() > 0) 
+      heartbeat(true);
   }
+
   string readData() { 
     string rval;
     for(int i = 0; i < rows.size(); i++) { 
@@ -467,7 +400,7 @@ class ConfPanel {
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_center(label);
       lv_obj_align_to(obj, cont2, LV_ALIGN_LEFT_MID, 0, 0);
-      set_btn_blue(obj);
+      //set_btn_blue(obj);
       lv_obj_add_event_cb(obj, btn_event_dec, LV_EVENT_CLICKED, this);
 
       obj = lv_btn_create(cont2);
@@ -476,7 +409,7 @@ class ConfPanel {
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_center(label);
       lv_obj_align_to(obj, cont2, LV_ALIGN_CENTER, 0, 0);
-      set_btn_blue(obj);
+      //set_btn_blue(obj);
       lv_obj_add_event_cb(obj, btn_event_1x, LV_EVENT_CLICKED, this);
       multBut = obj;
 
@@ -486,7 +419,7 @@ class ConfPanel {
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_center(label);
       lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
-      set_btn_blue(obj);
+      //set_btn_blue(obj);
       lv_obj_add_event_cb(obj, btn_event_inc, LV_EVENT_CLICKED, this);
 
     } else { 
@@ -505,7 +438,7 @@ class ConfPanel {
       lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 0, 1,
                           LV_GRID_ALIGN_STRETCH, i, 1);
       lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, &rows[i]);
-      set_btn_blue(obj);
+      //set_btn_blue(obj);
       rows[i].sel = obj;
 
       obj = lv_label_create(cont);
@@ -568,6 +501,7 @@ void setup() {
     panel_setup();
     Serial.println("Setup done");
     delay(1000);
+    j.mqtt.active = false;
     j.run();
     //udp.begin(4444);
 }
@@ -579,8 +513,11 @@ lv_obj_t *tileview = NULL;
 LineBuffer lb;
 
 void processData(const char *buf, int n) { 
+  string x;
+  x.assign(buf, n);
+  Serial.printf("processData():\n%s\n", x.c_str());
   lb.add((char *)buf, n, [](const char *l) { 
-    //Serial.printf("Got line: %s\n", l);
+    Serial.printf("Got line: %s\n", l);
     if (parsingSchema) {
       Serial.printf("parsing schema %d: %s\n", schema_idx, l);
       schema += string(l) + "\n";
@@ -614,6 +551,11 @@ void loop() {
     if (j.hz(1)) {
       //printf("loop()\n");
     }
+    if (j.hz(5)) {
+      for (auto p : panels) { 
+        p->run();
+      }
+    }
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
     delay(1);
@@ -626,9 +568,13 @@ void loop() {
       s += p->readData();
 
     if(tcpClient.connected() == false) { 
-      //tcpClient.close();
-      Serial.printf("tcpClient.connect() %lx\n", (long)&tcpClient);
-      tcpClient.connect("192.168.68.111", 4444);
+      tcpClient.stop();
+      //Serial.printf("tcpClient.connect() %lx\n", (long)&tcpClient);
+      //tcpClient.connect("192.168.68.111", 4444);
+      if(j.hz(.5)) {
+          int rc = tcpClient.connect("192.168.0.154", 4444);
+          Serial.printf("WiFiClient.connect() returned %d\n", rc);
+      }
       tcpTimeout = 0;
     }
     if (s.length() > 0) {
@@ -652,7 +598,7 @@ void loop() {
     if (tcpClient.available() > 0) {
         char buf[1024];
         int n = tcpClient.read((uint8_t *)buf, sizeof(buf));
-        Serial.printf("read %d %d\n", n, (int)millis());
+        //Serial.printf("read %d %d\n", n, (int)millis());
         processData(buf, n);
         tcpTimeout = 0;
         s = "ACK\n";
