@@ -683,7 +683,7 @@ string schema;
 int schema_idx = 0;
 lv_obj_t *tileview = NULL;
 
-void loop(){L
+void loop() {
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
     delay(1);
