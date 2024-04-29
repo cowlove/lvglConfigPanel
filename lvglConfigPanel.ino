@@ -240,10 +240,15 @@ vector<string> split(const char *line, const char *delim) {
   return rval;
 }
 
+
 class ConfPanel { 
   public:
-  ConfPanel(const char *cfg) { parseConfig(cfg);} 
-  ConfPanel() {}
+  int index;
+  ConfPanel(int idx, const string cfg, lv_obj_t *tile) {
+      index = idx; 
+      parseConfig(cfg.c_str());
+      create(tile);
+  } 
   struct ConfPanelParam {
     ConfPanel *parent;
     int index;
@@ -259,6 +264,7 @@ class ConfPanel {
     char enumlabels[32] = {0};
     float current;
     bool selected = false;
+    bool changed = false;
   };
   lv_obj_t *multBut = NULL;
   //int nr_rows = 13;
@@ -337,6 +343,31 @@ class ConfPanel {
     }
   }
 
+  void onRecv(const string &buf) {
+    vector<string> lines = split(buf.c_str(), "\n");
+    for(string s : lines) {
+      int i1, i2;
+      float v;
+      if (sscanf(s.c_str(), "VALUE %d %d %f", &i1, &i2, &v) == 3 && i1 == index && i2 > 0 && i2 < rows.size()) {
+        ConfPanelParam *p = &rows[i2];
+        p->current = v;
+        paramIncrement(i2, 0);
+      }
+    }
+  }
+  string readData() { 
+    string rval;
+    for(int i = 0; i < rows.size(); i++) { 
+      if (rows[i].changed) { 
+        char buf[128];
+        snprintf(buf, sizeof(buf), "SET %d %d %f\n", index, i, rows[i].current);
+        rval += buf;
+        rows[i].changed = false;
+      }
+    }
+    return rval;
+  }
+
   void paramIncrement(int idx, float dir) { 
     if (idx < 0 || idx >= rows.size()) 
       return;
@@ -364,6 +395,7 @@ class ConfPanel {
         if (val < p->min) val = p->min;
       }
     }
+    p->changed = (p->current != val); 
     p->current = val;
 
     if (strchr(p->enumlabels, '/') == NULL) { 
@@ -389,7 +421,7 @@ class ConfPanel {
 
   bool isConfigPanel = true;
 
-  void conf_menu_create(lv_obj_t *parent)
+  void create(lv_obj_t *parent)
   {
     for (int r = 0; r < rows.size(); r++) { 
       row_dsc[r] = 50;
@@ -448,7 +480,6 @@ class ConfPanel {
       lv_obj_set_layout(cont, LV_LAYOUT_GRID);  
     }
 
-  
     for(int i = 0; i < rows.size(); i++) {
       ConfPanelParam *p = &rows[i];
 
@@ -499,62 +530,206 @@ class ConfPanel {
 
 class DispPanel : public ConfPanel { 
   public:
-    DispPanel(const char *conf) : ConfPanel(conf) { 
+    DispPanel(int i, const string conf, lv_obj_t *tile) : ConfPanel(i, conf, tile) { 
       isConfigPanel = false; 
     }
 };
 
-ConfPanel cp1( 
-    "Navigation Mode, none, 0, 0, 0, 0, 0, NAV/HDG/WING LVL\n" 
-    "Altitude, %.0f',100,-1000,10000,7500,0,none\n"
-    "Max Bank, %.1f,0.1,0,22,15,0,none\n"
-    "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
-    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
-    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
-    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
-    "PID Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
-    "P Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
-    "I Gain, %+6.3f, 0.01, 0, 0, 0.002, 0, none\n"
-    "D Gain, %+5.2f, 0.01, 0, 0, 1.09, 0, none\n"
-    "Final Gain, %+5.2f, 0.01, 0, 0, 1.01, 0, none\n"
-    "I Max, %+5.2f, 0.001, 0, 0, 0.50, 0, none\n"
-);
+class ConfPanelParam; 
+class ConfPanelClient {
+  public:
+  int index;
+  bool schemaRequested = false;
+  vector <ConfPanelParam *> params;
+  ConfPanelClient(int i) : index(i) {}
+  
+  int attach(ConfPanelParam *p) { 
+    params.push_back(p);
+    return params.size() - 1;
+  } 
+  inline string schema();
+  inline string values();
+  inline void onRecv(const string &);
+  inline string readData(); 
+};
 
-DispPanel cp2(
-    "PID2 Select, none, 0, 0, 0, 0, 1, PITCH/ROLL/ALT/HDG/XTERR\n"
-    "P2 Gain, %+5.2f, 0.01, 0, 0, 0.52, 0, none\n"
-    "I2 Gain, %+6.3f, 0.001, 0, 0, 0.002, 0, none\n"
-    "Roll Trim, %+5.2f, 0.01, -1, +1, 0.01, 0, none\n"
-    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
-    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
-    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
-    "Pitch Trim, %+5.2f, 0.01, -1, +1, -0.06, 0, none\n"
-    "Roll->Pitch Coupling, %+5.2f, 0.01, -1, +1, 0.05, 0, none\n"
-    "Pitch->Roll Coupling, %+5.2f, 0.01, -1, +1, 0.19, 0, none\n"
-);
+class ConfPanelParam {
+  float inc, min, max, lastValue;
+  float *ptr;
+  bool wrap;
+  string label, fmt, enumlist;
+  int index;
+  ConfPanelClient *owner;
+  public:
+  ConfPanelParam(ConfPanelClient *o, float *p, const char *l, const char *f, float i = 1, float mi = 0, float ma = 0, bool w = false, const char *el = "none") 
+    : owner(o), ptr(p), inc(i), min(mi), max(ma), wrap(w) {
+      enumlist = el;
+      label = l;
+      fmt = f; 
+      index = owner->attach(this);
+      lastValue = *ptr;
+  }
+  string schemaString() { 
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s, %s, %f, %f, %f, %f, %d, %s", label.c_str(), fmt.c_str(), inc, min, max, *ptr, (int)wrap, enumlist.c_str());
+    return string(buf);
+  }
+  string valueString() { 
+    char buf[256];
+    snprintf(buf, sizeof(buf), "VALUE %d %d %f", owner->index, index, *ptr);
+    return string(buf);
+  }
+  string readData() { 
+    if (*ptr != lastValue) { 
+      lastValue = *ptr;
+      return valueString();
+    } 
+    return "";
+  }
+  void set(float f) {
+    lastValue = *ptr = f;
+  }
 
-void tiles_create() { 
-    lv_obj_t *tileview = lv_tileview_create(lv_scr_act());
-    lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+};
 
-    lv_obj_t *t1 = lv_tileview_add_tile(tileview, 0, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
-    lv_obj_t *t2 = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
-    lv_obj_t *t3 = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
-
-    cp1.conf_menu_create(t1);
-    cp2.conf_menu_create(t2);
+inline string ConfPanelClient::schema() {
+  char buf[32];
+  snprintf(buf, sizeof(buf), "SCHEMA %d\n", index); 
+  string rval = buf;
+  for(auto i = params.begin(); i != params.end(); i++) { 
+    rval += (*i)->schemaString() + "\n";
+  }
+  return rval + "END\n";
 }
+  
+inline string ConfPanelClient::values() { 
+  string rval;
+  for(auto i = params.begin(); i != params.end(); i++) { 
+    rval += (*i)->valueString() + "\n";
+  }
+  return rval;
+}
+
+inline string ConfPanelClient::readData() { 
+  string rval;
+  if (schemaRequested) {
+    schemaRequested = false;
+    rval += schema();
+  }
+  for(auto i = params.begin(); i != params.end(); i++) { 
+    string s = (*i)->readData();
+    if (s.length() > 0)
+      rval += s + "\n";
+  }
+  //Serial.printf("client %d read %s\n", index, rval.c_str());
+  return rval;
+}
+
+inline void ConfPanelClient::onRecv(const string &buf) { 
+  vector<string> lines = split(buf.c_str(), "\n");
+  for(string s : lines) {
+    int i1, i2;
+    float v;
+    //Serial.printf("client %d recv %s\n", index, s.c_str());
+    if (sscanf(s.c_str(), "SET %d %d %f", &i1, &i2, &v) == 3 && i1 == index && i2 >= 0 && i2 < params.size()) {
+      params[i2]->set(v); 
+    }
+    if (strcmp(s.c_str(), "SCHEMA") == 0) {
+      schemaRequested = true; 
+    }
+  }
+}
+
+class ConfPanelParamFloat : public ConfPanelParam { 
+public:
+  ConfPanelParamFloat(ConfPanelClient *o, float *ptr, const char *l, float i = 1,const char *f = "%.1f", float mi = 0, float ma = 0, bool w = false) : ConfPanelParam(o, ptr, l, f, i, mi, ma, w) {}
+};
+class ConfPanelParamEnum : public ConfPanelParam { 
+public:
+  ConfPanelParamEnum(ConfPanelClient *o, float *ptr, const char *l, const char *en, bool w = false) : ConfPanelParam(o, ptr, l, "none", 1, 0, 0, w, en) {}
+};
+
+float setTempA = 106.1, setTempB = 0, setTempC = 10, enumB = 2, counter = 0, counterMode = 3, abLock = 0;
+ConfPanelClient cpc(0);
+ConfPanelParamFloat p1(&cpc, &setTempA, "Set Temp A", 0.1);
+ConfPanelParamFloat p5(&cpc, &setTempB, "Set Temp B", 0.1);
+ConfPanelParamEnum p2(&cpc, &enumB, "Mode", "AUTO/MANUAL/OFF");
+ConfPanelParamFloat p3(&cpc, &counter, "Counter", 0.1);
+ConfPanelParamEnum p4(&cpc, &counterMode, "Counter Mode", "UP/DOWN/OFF");
+ConfPanelParamEnum p6(&cpc, &abLock, "A/B Locked", "OFF/ON");
+//ConfPanelParamFloat p7(&cpc, &panelComm.to, "Comm To");
+//ConfPanelParamFloat p8(&cpc, &panelComm.from, "Comm From");
+
+ConfPanelClient cpc1(1);
+ConfPanelParamFloat p9(&cpc1, &setTempC, "Set Temp C", 0.1);
+
+
+vector <ConfPanel *> panels;
+
+vector <ConfPanelClient *> clients;
 
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
-    tiles_create();
     Serial.println("Setup done");
+    clients.push_back(&cpc);
+    clients.push_back(&cpc1);
+    for (auto c : clients) 
+      c->onRecv("SCHEMA\n");
 }
 
-void loop(){
-    //Serial.println("Loop");
+bool parsingSchema = false;
+string schema;
+int schema_idx = 0;
+lv_obj_t *tileview = NULL;
+
+void loop(){L
+    //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
-    yield();
+    delay(1);
+    if (counterMode == 0) 
+      counter += 1;
+    if (counterMode == 1)
+      counter -= 1;
+    if (abLock) 
+      setTempB = setTempA; 
+
+    string s;
+    for (auto p : panels) 
+      s += p->readData();
+    for (auto c : clients) 
+      c->onRecv(s); 
+    s = "";   
+    for (auto c : clients) 
+      s += c->readData();
+    if (s.length() > 0) { 
+      //Serial.printf("big read:\n%s", s.c_str());    
+      vector<string> lines = split(s.c_str(), "\n");
+      for(string l : lines) { 
+          Serial.printf("parsing line: %s\n", l.c_str());
+          if (parsingSchema) {
+            //Serial.printf("parsing schema %d: %s\n", schema_idx, l.c_str());
+            schema += l + "\n";
+            if (strcmp(l.c_str(), "END") == 0 && panels.size() == schema_idx) { 
+              Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
+              if (tileview == NULL) { 
+                tileview = lv_tileview_create(lv_scr_act());
+                lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+                lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+              }
+              panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+              parsingSchema = false;
+            }
+          } else {
+            if (sscanf(l.c_str(), "SCHEMA %d", &schema_idx) == 1) {
+              parsingSchema = true;
+              schema = "";
+            }
+            for (auto p : panels) { 
+              p->onRecv(l);
+            }
+          }
+      }
+    }
 }
+  
