@@ -535,6 +535,10 @@ class DispPanel : public ConfPanel {
     }
 };
 
+
+/////////////////////////////////////
+// CLIENT CODE
+
 class ConfPanelParam; 
 class ConfPanelClient {
   public:
@@ -668,6 +672,13 @@ vector <ConfPanel *> panels;
 
 vector <ConfPanelClient *> clients;
 
+#define GIT_VERSION "gitversion"
+#include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
+
+JStuff j;
+
+WiFiUDP udp;
+
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
@@ -676,6 +687,8 @@ void setup() {
     clients.push_back(&cpc1);
     for (auto c : clients) 
       c->onRecv("SCHEMA\n");
+    j.run();
+    udp.begin(4444);
 }
 
 bool parsingSchema = false;
@@ -684,6 +697,7 @@ int schema_idx = 0;
 lv_obj_t *tileview = NULL;
 
 void loop() {
+    j.run();
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
     delay(1);
@@ -697,39 +711,48 @@ void loop() {
     string s;
     for (auto p : panels) 
       s += p->readData();
-    for (auto c : clients) 
-      c->onRecv(s); 
-    s = "";   
-    for (auto c : clients) 
-      s += c->readData();
-    if (s.length() > 0) { 
-      //Serial.printf("big read:\n%s", s.c_str());    
-      vector<string> lines = split(s.c_str(), "\n");
-      for(string l : lines) { 
-          Serial.printf("parsing line: %s\n", l.c_str());
-          if (parsingSchema) {
-            //Serial.printf("parsing schema %d: %s\n", schema_idx, l.c_str());
-            schema += l + "\n";
-            if (strcmp(l.c_str(), "END") == 0 && panels.size() == schema_idx) { 
-              Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
-              if (tileview == NULL) { 
-                tileview = lv_tileview_create(lv_scr_act());
-                lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-                lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
-              }
-              panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
-              parsingSchema = false;
+
+    if (s.length() > 0) {
+      udp.beginPacket("255.255.255.255", 4444);
+      udp.write((uint8_t *)s.c_str(), s.length());
+      udp.endPacket();
+    }
+
+    if(panels.size() == 0 && j.hz(.5)) {
+      s = "SCHEMA\n";
+      udp.beginPacket("255.255.255.255", 4444);
+      udp.write((uint8_t *)s.c_str(), s.length());
+      udp.endPacket();
+    }
+
+    if (udp.parsePacket() > 0) {
+      char buf[1024];
+      static LineBuffer lb;
+      int n = udp.read((uint8_t *)buf, sizeof(buf));
+      lb.add((char *)buf, n, [](const char *l) { 
+        if (parsingSchema) {
+          Serial.printf("parsing schema %d: %s\n", schema_idx, l);
+          schema += string(l) + "\n";
+          if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
+            Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
+            if (tileview == NULL) { 
+              tileview = lv_tileview_create(lv_scr_act());
+              lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+              lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
             }
-          } else {
-            if (sscanf(l.c_str(), "SCHEMA %d", &schema_idx) == 1) {
-              parsingSchema = true;
-              schema = "";
-            }
-            for (auto p : panels) { 
-              p->onRecv(l);
-            }
+            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+            parsingSchema = false;
           }
-      }
+        } else {
+          if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
+            parsingSchema = true;
+            schema = "";
+          }
+          for (auto p : panels) { 
+            p->onRecv(l);
+          }
+        }
+      }); 
     }
 }
   
