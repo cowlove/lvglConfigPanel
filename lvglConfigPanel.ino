@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <lvgl.h>
+#include "Client.h"
 
 #define WAVESHARE // use to switch between WaveShare4.3 and LilyGO T-RGB 2.1
 
@@ -56,7 +57,7 @@ void lvgl_port_tp_read(lv_indev_drv_t * indev, lv_indev_data_t * data)
         data->point.x = point.x;
         data->point.y = point.y;
 
-        Serial.printf("Touch point: x %d, y %d\n", point.x, point.y);
+        //Serial.printf("Touch point: x %d, y %d\n", point.x, point.y);
     }
 }
 #endif
@@ -192,10 +193,10 @@ void set_btn_red(lv_obj_t *b) {
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
 
-void set_btn_blue(lv_obj_t *b) { 
+void set_btn_blue(lv_obj_t *b, int blue = 200) { 
   static lv_style_t style_btn_red2;
   lv_style_init(&style_btn_red2);
-  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, 200));
+  lv_style_set_bg_color(&style_btn_red2, lv_color_make(0, 0, blue));
   lv_style_set_bg_opa(&style_btn_red2, LV_OPA_COVER);
   lv_obj_add_style(b, &style_btn_red2, 0);
 }
@@ -343,15 +344,25 @@ class ConfPanel {
     }
   }
 
+  bool toggle = false;
   void onRecv(const string &buf) {
+    Serial.printf("processing line: %s\n", buf.c_str());
     vector<string> lines = split(buf.c_str(), "\n");
     for(string s : lines) {
+      //Serial.printf("processing line: %s\n", s.c_str());
       int i1, i2;
       float v;
-      if (sscanf(s.c_str(), "VALUE %d %d %f", &i1, &i2, &v) == 3 && i1 == index && i2 > 0 && i2 < rows.size()) {
+      if (sscanf(s.c_str(), "VALUE %d %d %f", &i1, &i2, &v) == 3 && i1 == index && i2 >= 0 && i2 < rows.size()) {
         ConfPanelParam *p = &rows[i2];
         p->current = v;
         paramIncrement(i2, 0);
+      }
+    }
+    if (multBut != NULL) { 
+      if (toggle = !toggle) {
+        set_btn_blue(multBut);
+      } else {
+        set_btn_blue(multBut, 150);
       }
     }
   }
@@ -415,7 +426,7 @@ class ConfPanel {
     }
   }
 
-  static const int max_rows = 99;
+  static const int max_rows = 399;
   lv_coord_t col_dsc[4] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_coord_t row_dsc[max_rows];
 
@@ -542,72 +553,127 @@ vector <ConfPanel *> panels;
 
 JStuff j;
 
-WiFiUDP udp;
+WiFiClient tcpClient;
+//WiFiUDP udp;
+
+#if 0 
+static void handleError(void* arg, AsyncClient* client, uint8_t e) {
+  Serial.printf("handleError() %lx %s\n", (long)client, client->errorToString(e));
+}
+static void handleTimeout(void* arg, AsyncClient* client, uint32_t t) {
+  Serial.printf("handleTimeout() %lx\n", (long)client);
+}
+void processData(const char *, int );
+static void handleData(void* arg, AsyncClient* client, void *data, size_t len) {
+	Serial.printf("Got %d bytes: %s\n", len);
+  processData((const char *)data, len);
+}
+static void handleNewClient(void* arg, AsyncClient* client) {
+  client->onData(&handleData, NULL);
+  Serial.printf("handleNewClient() %lx\n", (long)client);
+}
+#endif 
 
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
     Serial.println("Setup done");
+    delay(1000);
     j.run();
-    udp.begin(4444);
+    //udp.begin(4444);
 }
 
 bool parsingSchema = false;
 string schema;
 int schema_idx = 0;
 lv_obj_t *tileview = NULL;
+LineBuffer lb;
 
+void processData(const char *buf, int n) { 
+  lb.add((char *)buf, n, [](const char *l) { 
+    //Serial.printf("Got line: %s\n", l);
+    if (parsingSchema) {
+      Serial.printf("parsing schema %d: %s\n", schema_idx, l);
+      schema += string(l) + "\n";
+      if (strcmp(l, "END") == 0)
+        parsingSchema = false;
+      if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
+        //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
+        if (tileview == NULL) { 
+          tileview = lv_tileview_create(lv_scr_act());
+          lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+          lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+        }
+        panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+        parsingSchema = false;
+      }
+    } else {
+      if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
+        parsingSchema = true;
+        schema = "";
+      }
+      for (auto p : panels) { 
+        p->onRecv(l);
+      }
+    }
+  }); 
+}
+
+int tcpTimeout = 0;
 void loop() {
     j.run();
+    if (j.hz(1)) {
+      //printf("loop()\n");
+    }
     //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
     lv_timer_handler();
-    delay(1);
+    delay(2);
 
     string s;
     for (auto p : panels) 
       s += p->readData();
 
+    if(tcpClient.connected() == false) { 
+      //tcpClient.close();
+      Serial.printf("tcpClient.connect() %lx\n", (long)&tcpClient);
+      tcpClient.connect("192.168.68.111", 4444);
+      tcpTimeout = 0;
+    }
     if (s.length() > 0) {
-      udp.beginPacket("255.255.255.255", 4444);
-      udp.write((uint8_t *)s.c_str(), s.length());
-      udp.endPacket();
+      //udp.beginPacket("255.255.255.255", 4444);
+      //udp.write((uint8_t *)s.c_str(), s.length());
+      //udp.endPacket();
+      if (tcpClient.connected()) {
+        tcpClient.write(s.c_str(), s.length());
+      }
     }
 
     if(panels.size() == 0 && j.hz(.5)) {
       s = "SCHEMA\n";
-      udp.beginPacket("255.255.255.255", 4444);
-      udp.write((uint8_t *)s.c_str(), s.length());
-      udp.endPacket();
+      //udp.beginPacket("255.255.255.255", 4444);
+      //udp.write((uint8_t *)s.c_str(), s.length());
+      //udp.endPacket();
+      if (tcpClient.connected()) {
+        tcpClient.write(s.c_str(), s.length());
+      }
     }
-
-    if (udp.parsePacket() > 0) {
-      char buf[1024];
-      static LineBuffer lb;
-      int n = udp.read((uint8_t *)buf, sizeof(buf));
-      lb.add((char *)buf, n, [](const char *l) { 
-        if (parsingSchema) {
-          Serial.printf("parsing schema %d: %s\n", schema_idx, l);
-          schema += string(l) + "\n";
-          if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
-            Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
-            if (tileview == NULL) { 
-              tileview = lv_tileview_create(lv_scr_act());
-              lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-              lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
-            }
-            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
-            parsingSchema = false;
-          }
-        } else {
-          if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
-            parsingSchema = true;
-            schema = "";
-          }
-          for (auto p : panels) { 
-            p->onRecv(l);
-          }
-        }
-      }); 
+    if (tcpClient.available() > 0) {
+        char buf[1024];
+        int n = tcpClient.read((uint8_t *)buf, sizeof(buf));
+        Serial.printf("read %d %d\n", n, (int)millis());
+        processData(buf, n);
+        tcpTimeout = 0;
     }
+    if(j.hz(1) && tcpTimeout++ > 3) { 
+      Serial.printf("tcpTimeout\n");
+      tcpClient.stop();
+      tcpTimeout = 0;
+    }
+   
+    //if (udp.parsePacket() > 0) {
+    //  char buf[1024];
+    //  int n = udp.read((uint8_t *)buf, sizeof(buf));
+    //  processData(buf, n);
+    //}
 }
   
