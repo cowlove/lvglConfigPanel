@@ -304,7 +304,6 @@ class ConfPanel {
       if (l == NULL)
         return;
       const char *t = lv_label_get_text(l);
-      int mult = 1;
       if (t != NULL)
         sscanf(t, "%dX", &mult);
     }
