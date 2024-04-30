@@ -458,10 +458,8 @@ class DispPanel : public ConfPanel {
     }
 };
 
-vector <ConfPanel *> panels;
 JStuff j;
 
-ReliableTcpClient client("192.168.0.154", 4444);
 
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
@@ -473,72 +471,93 @@ void setup() {
     //udp.begin(4444);
 }
 
-bool parsingSchema = false;
-string schema;
-int schema_idx = 0;
-lv_obj_t *tileview = NULL;
-LineBuffer lb;
 
-void processData(const char *buf, int n) { 
-  string x;
-  x.assign(buf, n);
-  //Serial.printf("processData():\n%s\n", x.c_str());
-  lb.add((char *)buf, n, [](const char *l) { 
-    //Serial.printf("Got line: %s\n", l);
-    if (parsingSchema) {
-      Serial.printf("parsing schema %d: %s\n", schema_idx, l);
-      schema += string(l) + "\n";
-      if (strcmp(l, "END") == 0)
-        parsingSchema = false;
-      if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
-        //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
-        if (tileview == NULL) { 
-          tileview = lv_tileview_create(lv_scr_act());
-          lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-          lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
-        }
-        panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
-        parsingSchema = false;
-      }
-    } else {
-      if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
-        parsingSchema = true;
-        schema = "";
-      }
-      for (auto p : panels) { 
-        p->onRecv(l);
-      }
+class ConfPanelTransportScreen {
+  WiFiUDP udp;
+  ReliableStream *stream;
+  bool parsingSchema = false;
+  string schema;
+  int schema_idx = 0;
+  lv_obj_t *tileview = NULL;
+  LineBuffer lb;
+  vector <ConfPanel *> panels;
+  bool initialized = false;
+public:
+  ConfPanelTransportScreen(ReliableStream *s) : stream(s) {}
+  void run() {
+    string s;
+    for (auto p : panels) {
+        s = p->readData();    
+        stream->write(s);
     }
-  }); 
-}
-
-int tcpTimeout = 0;
-void loop() {
-    j.run();
-    if (j.hz(1)) {
-      //printf("loop()\n");
+    while (stream->read(s)) { 
+      onRecv(s.c_str(), s.length());    
     }
     if (j.hz(5)) {
       for (auto p : panels) { 
         p->run();
       }
     }
-    //Serial.printf("%f %f\n", panelComm.to, panelComm.from);
+    if (j.hz(.2) && panels.size() == 0) {
+      stream->write("SCHEMA\n");
+    }
+    if (!initialized) { 
+      udp.begin(4444);
+      initialized = true;
+    }
+    if (udp.parsePacket()) { 
+      unsigned char buf[1024];
+      int n = udp.read(buf, sizeof(buf));
+      if (n > 0) { 
+        string line;
+        line.assign((char *)buf, n);
+        stream->begin(line.c_str(), 4444);
+        Serial.printf("Discovered client %s\n", line.c_str());
+      }
+    }
+  }
+
+  void onRecv(const char *buf, int n) { 
+    string x;
+    x.assign(buf, n);
+    //Serial.printf("processData():\n%s\n", x.c_str());
+    lb.add((char *)buf, n, [this](const char *l) { 
+      //Serial.printf("Got line: %s\n", l);
+      if (parsingSchema) {
+        Serial.printf("parsing schema %d: %s\n", schema_idx, l);
+        schema += string(l) + "\n";
+        if (strcmp(l, "END") == 0)
+          parsingSchema = false;
+        if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
+          //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
+          if (tileview == NULL) { 
+            tileview = lv_tileview_create(lv_scr_act());
+            lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+            lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+          }
+          panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+          parsingSchema = false;
+        }
+      } else {
+        if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
+          parsingSchema = true;
+          schema = "";
+        }
+        for (auto p : panels) { 
+          p->onRecv(l);
+        }
+      }
+    }); 
+  }
+};
+
+ReliableTcpClient client("0.0.0.0", 4444);
+ConfPanelTransportScreen cpt(&client);
+
+void loop() {
+    j.run();
+    cpt.run();
     lv_timer_handler();
     delay(1);
-
-    //if (panels.size() > 0)
-    //    return; 
-
-    string s;
-    for (auto p : panels) 
-      s += p->readData();
-    client.write(s);
-
-    if(panels.size() == 0 && j.hz(.5)) {
-      client.write("SCHEMA\n");
-    }
-    s = client.read();
-    processData(s.c_str(), s.length());
 }
   
