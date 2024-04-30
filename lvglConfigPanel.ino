@@ -2,6 +2,10 @@
 #include <lvgl.h>
 #include "WiFiClient.h"
 
+#define GIT_VERSION "gitversion"
+#include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
+#include "/home/jim/Arduino/libraries/jimlib/src/confPanel.h"
+
 // needs lvgl library version 8.3.11
 // needs ESP32_Display_Panel version 0.0.2
 // check Arduino/libraries/lv_conf.h for fonts
@@ -139,37 +143,6 @@ using namespace std;
 #include <functional> 
 #include <cctype>
 #include <locale>
-
-// trim from start
-inline std::string &ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-
-// trim from end
-inline std::string &rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
-}
-
-// trim from both ends
-inline std::string &trim(std::string &s) {
-    return ltrim(rtrim(s));
-}
-
-vector<string> split(const char *line, const char *delim) {
-  char *buf = strdup(line); 
-  std::vector<string> rval;
-  for(char *w = strtok(buf, delim); w != NULL; w = strtok(NULL, delim)) {
-    string ws(w);
-    trim(ws);
-    rval.push_back(ws);
-  }
-  free(buf);
-  return rval;
-}
 
 
 class ConfPanel { 
@@ -487,14 +460,9 @@ class DispPanel : public ConfPanel {
 };
 
 vector <ConfPanel *> panels;
-
-#define GIT_VERSION "gitversion"
-#include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
-
 JStuff j;
 
-WiFiClient tcpClient;
-//WiFiUDP udp;
+ReliableTcpClient client("192.168.0.154", 4444);
 
 void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
@@ -515,9 +483,9 @@ LineBuffer lb;
 void processData(const char *buf, int n) { 
   string x;
   x.assign(buf, n);
-  Serial.printf("processData():\n%s\n", x.c_str());
+  //Serial.printf("processData():\n%s\n", x.c_str());
   lb.add((char *)buf, n, [](const char *l) { 
-    Serial.printf("Got line: %s\n", l);
+    //Serial.printf("Got line: %s\n", l);
     if (parsingSchema) {
       Serial.printf("parsing schema %d: %s\n", schema_idx, l);
       schema += string(l) + "\n";
@@ -566,54 +534,12 @@ void loop() {
     string s;
     for (auto p : panels) 
       s += p->readData();
-
-    if(tcpClient.connected() == false) { 
-      tcpClient.stop();
-      //Serial.printf("tcpClient.connect() %lx\n", (long)&tcpClient);
-      //tcpClient.connect("192.168.68.111", 4444);
-      if(j.hz(.5)) {
-          int rc = tcpClient.connect("192.168.0.154", 4444);
-          Serial.printf("WiFiClient.connect() returned %d\n", rc);
-      }
-      tcpTimeout = 0;
-    }
-    if (s.length() > 0) {
-      //udp.beginPacket("255.255.255.255", 4444);
-      //udp.write((uint8_t *)s.c_str(), s.length());
-      //udp.endPacket();
-      if (tcpClient.connected()) {
-        tcpClient.write(s.c_str(), s.length());
-      }
-    }
+    client.write(s);
 
     if(panels.size() == 0 && j.hz(.5)) {
-      s = "SCHEMA\n";
-      //udp.beginPacket("255.255.255.255", 4444);
-      //udp.write((uint8_t *)s.c_str(), s.length());
-      //udp.endPacket();
-      if (tcpClient.connected()) {
-        tcpClient.write(s.c_str(), s.length());
-      }
+      client.write("SCHEMA\n");
     }
-    if (tcpClient.available() > 0) {
-        char buf[1024];
-        int n = tcpClient.read((uint8_t *)buf, sizeof(buf));
-        //Serial.printf("read %d %d\n", n, (int)millis());
-        processData(buf, n);
-        tcpTimeout = 0;
-        s = "ACK\n";
-        tcpClient.write(s.c_str(), s.length());
-     }
-    if(j.hz(1) && tcpTimeout++ > 3) { 
-      Serial.printf("tcpTimeout\n");
-      tcpClient.stop();
-      tcpTimeout = 0;
-    }
-   
-    //if (udp.parsePacket() > 0) {
-    //  char buf[1024];
-    //  int n = udp.read((uint8_t *)buf, sizeof(buf));
-    //  processData(buf, n);
-    //}
+    s = client.read();
+    processData(s.c_str(), s.length());
 }
   
