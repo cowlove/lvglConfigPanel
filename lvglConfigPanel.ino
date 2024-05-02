@@ -474,7 +474,7 @@ void setup() {
 
 class ConfPanelTransportScreen {
   WiFiUDP udp;
-  ReliableStream *stream;
+  ReliableStreamInterface *stream;
   bool parsingSchema = false;
   string schema;
   int schema_idx = 0;
@@ -483,7 +483,7 @@ class ConfPanelTransportScreen {
   vector <ConfPanel *> panels;
   bool initialized = false;
 public:
-  ConfPanelTransportScreen(ReliableStream *s) : stream(s) {}
+  ConfPanelTransportScreen(ReliableStreamInterface *s) : stream(s) {}
   void run() {
     string s;
     for (auto p : panels) {
