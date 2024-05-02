@@ -465,7 +465,7 @@ void setup() {
     Serial.begin(115200); /* prepare for possible serial debug */
     panel_setup();
     Serial.println("Setup done");
-    delay(1000);
+    //delay(1000);
     j.mqtt.active = false;
     j.jw.enabled = 0;
     j.run();
@@ -544,6 +544,8 @@ public:
             panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
+            stream->write("SCHEMA\n");
+            lastSchemaRequestTime = millis();
           }
           parsingSchema = false;
         }
@@ -566,8 +568,8 @@ ReliableStreamESPNow client;
 ConfPanelTransportScreen cpt(&client);
 
 void loop() {
-    j.run();
     cpt.run();
+    j.run();
     lv_timer_handler();
     delay(1);
 }
