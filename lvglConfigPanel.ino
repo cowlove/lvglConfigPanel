@@ -467,6 +467,7 @@ void setup() {
     Serial.println("Setup done");
     delay(1000);
     j.mqtt.active = false;
+    j.jw.enabled = 0;
     j.run();
     //udp.begin(4444);
 }
@@ -482,6 +483,7 @@ class ConfPanelTransportScreen {
   LineBuffer lb;
   vector <ConfPanel *> panels;
   bool initialized = false;
+  uint32_t lastSchemaRequestTime = -1000;
 public:
   ConfPanelTransportScreen(ReliableStreamInterface *s) : stream(s) {}
   void run() {
@@ -498,11 +500,13 @@ public:
         p->run();
       }
     }
-    if (j.hz(.2) && panels.size() == 0) {
+    if (panels.size() == 0 && millis() - lastSchemaRequestTime > 3000) {
       stream->write("SCHEMA\n");
+      lastSchemaRequestTime = millis();
     }
     if (!initialized) { 
-      udp.begin(4444);
+      if (WiFi.isConnected()) 
+        udp.begin(4444);
       initialized = true;
     }
     if (udp.parsePacket()) { 
@@ -517,29 +521,35 @@ public:
     }
   }
 
+  int expectedSchemaLength = 0;
   void onRecv(const char *buf, int n) { 
     string x;
     x.assign(buf, n);
-    //Serial.printf("processData():\n%s\n", x.c_str());
+    //Serial.printf("processData() %d bytes:\n%s\n", n, x.c_str());
     lb.add((char *)buf, n, [this](const char *l) { 
       //Serial.printf("Got line: %s\n", l);
       if (parsingSchema) {
-        Serial.printf("parsing schema %d: %s\n", schema_idx, l);
-        schema += string(l) + "\n";
+        //Serial.printf("parsing schema %d: %s\n", schema_idx, l);
         if (strcmp(l, "END") == 0)
           parsingSchema = false;
         if (strcmp(l, "END") == 0 && panels.size() == schema_idx) { 
           //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
-          if (tileview == NULL) { 
-            tileview = lv_tileview_create(lv_scr_act());
-            lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-            lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+          vector<string> slines = split(schema.c_str(), "\n");
+          if (slines.size() == expectedSchemaLength) { 
+            if (tileview == NULL) { 
+              tileview = lv_tileview_create(lv_scr_act());
+              lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+              lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+            }
+            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+          } else {
+            Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
           }
-          panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
           parsingSchema = false;
         }
+        schema += string(l) + "\n";
       } else {
-        if (sscanf(l, "SCHEMA %d", &schema_idx) == 1) {
+        if (sscanf(l, "SCHEMA %d %d", &schema_idx, &expectedSchemaLength) == 2) {
           parsingSchema = true;
           schema = "";
         }
@@ -551,7 +561,8 @@ public:
   }
 };
 
-ReliableTcpClient client("0.0.0.0", 4444);
+//ReliableTcpClient client("0.0.0.0", 4444);
+ReliableStreamESPNow client;
 ConfPanelTransportScreen cpt(&client);
 
 void loop() {
