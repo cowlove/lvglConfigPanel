@@ -1,6 +1,6 @@
 // Uncomment one of the following display boards:
-#include "waveshare43.h"
-//#include "elecrow7.h"
+#include "elecrow7.h"
+//#include "waveshare43.h"
 //#include "lilgoRGB.h"
 
 #include <Arduino.h>
@@ -59,7 +59,7 @@ class ConfPanel {
        lv_obj_set_style_bg_color(multBut, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
     } else {
       lv_color_t c = lv_obj_get_style_bg_color(multBut, LV_PART_MAIN);
-      c = lv_color_lighten(c, 13);
+      c = lv_color_lighten(c, 20);
       lv_obj_set_style_bg_color(multBut, c, LV_PART_MAIN);
     }
   }
@@ -235,7 +235,7 @@ class ConfPanel {
       cont = lv_obj_create(parent);
       lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
       lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
-      int buttonRowHeightPercent = row_height * 100 / ESP_PANEL_LCD_V_RES + 3;
+      int buttonRowHeightPercent = row_height * 100 / ESP_PANEL_LCD_V_RES + 5;
       Serial.printf("Row height percent %d\n", buttonRowHeightPercent);
       lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100 - buttonRowHeightPercent));
       //lv_obj_center(cont);
