@@ -1,6 +1,14 @@
+#include <lvgl.h>
 #include <ESP_Panel_Library.h>
 #include <ESP_IOExpander_Library.h>
 //#undef ESP_PANEL_USE_LCD_TOUCH
+
+
+// needs lvgl library version 8.3.11
+// needs ESP32_Display_Panel version 0.0.2
+// check Arduino/libraries/lv_conf.h for fonts
+
+
 
 /* LVGL porting configurations */
 #define LVGL_TICK_PERIOD_MS     (2)

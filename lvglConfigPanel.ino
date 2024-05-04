@@ -1,18 +1,15 @@
+//#include "waveshare43.h"
+#include "elecrow7.h"
+
+
 #include <Arduino.h>
-#include <lvgl.h>
 #include "WiFiClient.h"
 
 #define GIT_VERSION "gitversion"
 #include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
 #include "/home/jim/Arduino/libraries/jimlib/src/confPanel.h"
 
-// needs lvgl library version 8.3.11
-// needs ESP32_Display_Panel version 0.0.2
-// check Arduino/libraries/lv_conf.h for fonts
-
-
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
-
 static const lv_font_t *default_font =  &lv_font_montserrat_32;
 static const int row_height = 35;
 
@@ -25,7 +22,6 @@ using namespace std;
 #include <cctype>
 #include <locale>
 
-#include "waveshare43.h"
 
 class ConfPanel { 
   public:
@@ -345,18 +341,6 @@ class DispPanel : public ConfPanel {
 JStuff j;
 
 
-void setup() {
-    Serial.begin(115200); /* prepare for possible serial debug */
-    panel_setup();
-    Serial.println("Setup done");
-    //delay(1000);
-    j.mqtt.active = false;
-    //j.jw.enabled = false;
-    j.run();
-    //udp.begin(4444);
-}
-
-
 class ConfPanelTransportScreen {
   WiFiUDP udp;
   ReliableStreamInterface *stream;
@@ -447,6 +431,19 @@ public:
     }); 
   }
 };
+
+void setup() {
+    Serial.begin(115200); /* prepare for possible serial debug */
+    panel_setup();
+    //lv_demo_widgets();
+    //lv_timer_handler();
+    Serial.println("Setup done");
+    //delay(1000);
+    j.mqtt.active = false;
+    //j.jw.enabled = false;
+    j.run();
+    //udp.begin(4444);
+}
 
 //ReliableTcpClient client("0.0.0.0", 4444);
 ReliableStreamESPNow client;

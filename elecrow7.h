@@ -2,6 +2,11 @@
 #define ELECROW7_H
 
 
+// needs pre-packaged libraries and lvgl-3
+
+#define ESP_PANEL_LCD_H_RES 800
+#define ESP_PANEL_LCD_V_RES 480
+
 #include <lvgl.h>
 #include <demos/lv_demos.h>
 #include <examples/lv_examples.h>
