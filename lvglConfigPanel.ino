@@ -13,7 +13,8 @@
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
 
-static const lv_font_t *default_font =  &lv_font_montserrat_36;
+static const lv_font_t *default_font =  &lv_font_montserrat_32;
+static const int row_height = 35;
 
 #include <vector>
 #include <string>;
@@ -220,7 +221,7 @@ class ConfPanel {
   }
 
   static const int max_rows = 399;
-  lv_coord_t col_dsc[4] = {50, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_coord_t col_dsc[4] = {row_height, LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_coord_t row_dsc[max_rows];
 
   bool isConfigPanel = true;
@@ -228,7 +229,7 @@ class ConfPanel {
   void create(lv_obj_t *parent)
   {
     for (int r = 0; r < rows.size(); r++) { 
-      row_dsc[r] = 50;
+      row_dsc[r] = row_height;
     }
     row_dsc[rows.size()] = LV_GRID_TEMPLATE_LAST;
 
@@ -239,12 +240,14 @@ class ConfPanel {
       cont = lv_obj_create(parent);
       lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
       lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
-      lv_obj_set_size(cont, LV_PCT(100), LV_PCT(80));
+      int buttonRowHeightPercent = row_height * 100 / ESP_PANEL_LCD_V_RES + 3;
+      Serial.printf("Row height percent %d\n", buttonRowHeightPercent);
+      lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100 - buttonRowHeightPercent));
       //lv_obj_center(cont);
       lv_obj_set_layout(cont, LV_LAYOUT_GRID);
 
       lv_obj_t * cont2 = lv_obj_create(parent);
-      lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(20));
+      lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(buttonRowHeightPercent));
       lv_obj_align_to(cont2, cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
 
       obj = lv_btn_create(cont2);
@@ -348,7 +351,7 @@ void setup() {
     Serial.println("Setup done");
     //delay(1000);
     j.mqtt.active = false;
-    j.jw.enabled = 0;
+    //j.jw.enabled = false;
     j.run();
     //udp.begin(4444);
 }
@@ -423,6 +426,7 @@ public:
               lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
             }
             panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+            Serial.printf("Received valid schema length %d\n", slines.size());
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
             stream->write("SCHEMA\n");
