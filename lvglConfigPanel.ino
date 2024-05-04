@@ -1,6 +1,7 @@
-//#include "waveshare43.h"
-#include "elecrow7.h"
-
+// Uncomment one of the following display boards:
+#include "waveshare43.h"
+//#include "elecrow7.h"
+//#include "lilgoRGB.h"
 
 #include <Arduino.h>
 #include "WiFiClient.h"
@@ -21,7 +22,6 @@ using namespace std;
 #include <functional> 
 #include <cctype>
 #include <locale>
-
 
 class ConfPanel { 
   public:
@@ -48,7 +48,6 @@ class ConfPanel {
     bool selected = false;
     bool changed = false;
   };
-  //int nr_rows = 13;
   int selected_btn = -1;
   vector<ConfPanelParam> rows;
 
@@ -438,11 +437,9 @@ void setup() {
     //lv_demo_widgets();
     //lv_timer_handler();
     Serial.println("Setup done");
-    //delay(1000);
     j.mqtt.active = false;
     //j.jw.enabled = false;
     j.run();
-    //udp.begin(4444);
 }
 
 //ReliableTcpClient client("0.0.0.0", 4444);
@@ -453,6 +450,6 @@ void loop() {
     cpt.run();
     j.run();
     lv_timer_handler();
-    delay(1);
+    //delay(1);
 }
   
