@@ -453,7 +453,7 @@ public:
 JStuff j;
 
 //ReliableTcpClient client("0.0.0.0", 4444);
-ReliableStreamESPNow client(3);
+ReliableStreamESPNow client;
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
