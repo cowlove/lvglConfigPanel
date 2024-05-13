@@ -3,6 +3,9 @@
 
 
 // needs pre-packaged libraries and lvgl-3
+// seems to work with just cp -av ~/Downloads/Arduino_5inch/Hardware-Version-2.0/libraries/{LovyanGFX,gt911-arduino-main} ~/Arduino/libraries
+// and cd ~/Arduino/libraries/lvgl/src && ln -s ../examples ../demos . 
+
 
 #define ESP_PANEL_LCD_H_RES 800
 #define ESP_PANEL_LCD_V_RES 480
@@ -87,7 +90,6 @@ public:
 
   }
 };
-
 
 LGFX lcd;
 

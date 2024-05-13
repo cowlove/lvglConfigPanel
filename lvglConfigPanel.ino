@@ -235,7 +235,7 @@ public:
       cont = lv_obj_create(parent);
       lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
       lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
-      int buttonRowHeightPercent = row_height * 100 / ESP_PANEL_LCD_V_RES + 5;
+      int buttonRowHeightPercent = row_height * 100 / ESP_PANEL_LCD_V_RES + 6;
       Serial.printf("Row height percent %d\n", buttonRowHeightPercent);
       lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100 - buttonRowHeightPercent));
       //lv_obj_center(cont);
@@ -244,6 +244,7 @@ public:
       lv_obj_t *cont2 = lv_obj_create(parent);
       lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(buttonRowHeightPercent));
       lv_obj_align_to(cont2, cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+      lv_obj_set_scrollbar_mode(cont2, LV_SCROLLBAR_MODE_OFF);
 
       obj = lv_btn_create(cont2);
       label = lv_label_create(obj);
@@ -304,6 +305,8 @@ public:
       lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, 2, 1,
                            LV_GRID_ALIGN_END, i, 1);
       lv_obj_set_style_text_font(obj, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_event_cb(obj, btn_event_sel, LV_EVENT_CLICKED, &rows[i]);
       rows[i].val = obj;
       rows[i].current = rows[i].def;
       paramIncrement(i, 0);
@@ -338,8 +341,21 @@ public:
   }
 };
 
-JStuff j;
-
+class HzTimer { 
+public:
+  HzTimer(float h) : hertz(h) {}
+  bool force = true;
+  float hertz;
+  uint32_t last = 0;
+  bool hz(float h) {
+    uint32_t lastlast = last;
+    last = millis(); 
+    bool rval = force || last - lastlast > 1000.0 / h;
+    force = false;
+    return rval;
+  }
+  bool tick() { return hz(hertz); }
+};
 
 class ConfPanelTransportScreen {
   WiFiUDP udp;
@@ -352,9 +368,10 @@ class ConfPanelTransportScreen {
   vector<ConfPanel *> panels;
   bool initialized = false;
   uint32_t lastSchemaRequestTime = -1000;
+  HzTimer schemaRequestTimer, runTimer;
 public:
   ConfPanelTransportScreen(ReliableStreamInterface *s)
-    : stream(s) {}
+    : stream(s), schemaRequestTimer(0.3), runTimer(5) {}
   void run() {
     string s;
     for (auto p : panels) {
@@ -364,12 +381,12 @@ public:
     while (stream->read(s)) {
       onRecv(s.c_str(), s.length());
     }
-    if (j.hz(5)) {
+    if (runTimer.tick()) {
       for (auto p : panels) {
         p->run();
       }
     }
-    if (panels.size() == 0 && millis() - lastSchemaRequestTime > 3000) {
+    if (panels.size() == 0 && schemaRequestTimer.tick()) { 
       stream->write("SCHEMA\n");
       lastSchemaRequestTime = millis();
     }
@@ -433,24 +450,24 @@ public:
   }
 };
 
+JStuff j;
+
+//ReliableTcpClient client("0.0.0.0", 4444);
+ReliableStreamESPNow client(3);
+ConfPanelTransportScreen cpt(&client);
+
 void setup() {
-  Serial.begin(115200); /* prepare for possible serial debug */
+  Serial.begin(921600, SERIAL_8N1); /* prepare for possible serial debug */
   panel_setup();
   //lv_demo_widgets();
   //lv_timer_handler();
-  Serial.println("Setup done");
   j.mqtt.active = false;
-  //j.jw.enabled = false;
-  j.run();
+  j.jw.enabled = false;
 }
 
-//ReliableTcpClient client("0.0.0.0", 4444);
-ReliableStreamESPNow client;
-ConfPanelTransportScreen cpt(&client);
-
 void loop() {
-  cpt.run();
   j.run();
+  cpt.run();
   lv_timer_handler();
-  //delay(1);
+  delay(1);
 }
