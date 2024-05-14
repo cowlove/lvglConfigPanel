@@ -9,6 +9,7 @@
 
 #define GIT_VERSION "gitversion"
 #include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
+#include "/home/jim/Arduino/libraries/jimlib/src/espNowMux.h"
 #include "/home/jim/Arduino/libraries/jimlib/src/confPanel.h"
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
@@ -60,7 +61,7 @@ public:
       lv_obj_set_style_bg_color(multBut, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
     } else {
       lv_color_t c = lv_obj_get_style_bg_color(multBut, LV_PART_MAIN);
-      c = lv_color_lighten(c, 20);
+      c = lv_color_lighten(c, 60);
       lv_obj_set_style_bg_color(multBut, c, LV_PART_MAIN);
     }
   }
@@ -130,7 +131,8 @@ public:
     lv_obj_t *l = lv_obj_get_child(multBut, 0);
     if (l == NULL)
       return;
-    Serial.printf("pressed\n");
+    string s("HEY!");
+    espNowMux.send("g5", (uint8_t *)s.c_str(), s.length());
     const char *t = lv_label_get_text(l);
     int v;
     if (t != NULL && sscanf(t, "%dX", &v) == 1) {
@@ -348,10 +350,11 @@ public:
   float hertz;
   uint32_t last = 0;
   bool hz(float h) {
-    uint32_t lastlast = last;
-    last = millis(); 
-    bool rval = force || last - lastlast > 1000.0 / h;
-    force = false;
+    bool rval = force || (millis() - last) > 1000.0 / h;
+    if (rval) {
+        last = millis();
+        force = false;
+    }
     return rval;
   }
   bool tick() { return hz(hertz); }
