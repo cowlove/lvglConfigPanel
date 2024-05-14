@@ -247,6 +247,7 @@ public:
       lv_obj_set_size(cont2, LV_PCT(100), LV_PCT(buttonRowHeightPercent));
       lv_obj_align_to(cont2, cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
       lv_obj_set_scrollbar_mode(cont2, LV_SCROLLBAR_MODE_OFF);
+      lv_obj_clear_flag(cont2, LV_OBJ_FLAG_SCROLLABLE);
 
       obj = lv_btn_create(cont2);
       label = lv_label_create(obj);
