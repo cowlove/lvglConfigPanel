@@ -1,6 +1,6 @@
 // Uncomment one of the following display boards:
-#include "elecrow5.h"
-//#include "elecrow7.h"
+//#include "elecrow5.h"
+#include "elecrow7.h"
 //#include "waveshare43.h"
 //#include "lilgoRGB.h"
 
@@ -10,6 +10,7 @@
 #define GIT_VERSION "gitversion"
 #include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
 #include "/home/jim/Arduino/libraries/jimlib/src/espNowMux.h"
+#include "/home/jim/Arduino/libraries/jimlib/src/reliableStream.h"
 #include "/home/jim/Arduino/libraries/jimlib/src/confPanel.h"
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
@@ -457,7 +458,7 @@ public:
 JStuff j;
 
 //ReliableTcpClient client("0.0.0.0", 4444);
-ReliableStreamESPNow client;
+ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
