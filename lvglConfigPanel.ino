@@ -413,6 +413,8 @@ public:
   }
 
   int expectedSchemaLength = 0;
+  int tileCount = 0;
+  int schemaFlags = 0;
   void onRecv(const char *buf, int n) {
     string x;
     x.assign(buf, n);
@@ -432,7 +434,10 @@ public:
               lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
               lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
             }
-            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, schema_idx, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+            if (schemaFlags & 0x1) {
+              lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
+            }
             Serial.printf("Received valid schema length %d\n", slines.size());
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
@@ -443,7 +448,7 @@ public:
         }
         schema += string(l) + "\n";
       } else {
-        if (sscanf(l, "SCHEMA %d %d", &schema_idx, &expectedSchemaLength) == 2) {
+        if (sscanf(l, "SCHEMA %d %d %d", &schema_idx, &expectedSchemaLength, &schemaFlags) == 3) {
           parsingSchema = true;
           schema = "";
         }
