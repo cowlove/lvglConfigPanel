@@ -3,6 +3,8 @@ MONITOR_SPEED=921600
 
 GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
 BUILD_EXTRA_FLAGS += -DBOARD_HAS_PSRAM -DGIT_VERSION=\"$(GIT_VERSION)\"
+#EXCLUDE_DIRS=/home/jim/Arduino/libraries/TFT_eSPI/|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
+
 
 backtrace:
 	tr ' ' '\n' | /home/jim/.arduino15/packages/esp32/tools/xtensa-esp32-elf-gcc/*/bin/xtensa-esp32-elf-addr2line -f -i -e ${BUILD_DIR}/${MAIN_NAME}.elf
