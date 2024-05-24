@@ -46,6 +46,7 @@ public:
     float min;
     float max;
     int wrap;
+    int flags;
     char enumlabels[32] = { 0 };
     float current;
     bool selected = false;
@@ -72,7 +73,7 @@ public:
   }
   void addConfig(const char *buf) {
     vector<string> words = split(buf, ",");
-    if (words.size() == 8) {
+    if (words.size() == 9) {
       ConfPanelParam n;
       strncpy(n.label, words[0].c_str(), sizeof(n.label));
       strncpy(n.fmt, words[1].c_str(), sizeof(n.fmt));
@@ -82,6 +83,7 @@ public:
       sscanf(words[5].c_str(), "%f", &n.def);
       sscanf(words[6].c_str(), "%f", &n.wrap);
       strncpy(n.enumlabels, words[7].c_str(), sizeof(n.enumlabels));
+      sscanf(words[8].c_str(), "%d", &n.flags);
       if (strchr(n.enumlabels, '/') != NULL) {
         n.inc = 1;
         n.min = 0;

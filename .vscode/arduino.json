@@ -3,5 +3,5 @@
     "board": "esp32:esp32:esp32s3",
     "output": "./build/",
     "sketch": "lvglConfigPanel.ino",
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyUSB1"
 }
