@@ -4,8 +4,23 @@ MONITOR_SPEED=921600
 GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
 BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
 
-EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/common.hpp|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/device.hpp|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
-
+X0=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx_user
+X1=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0
+X2=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default
+#X3=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32
+X4=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3
+X5=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2
+XF=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3
+X6=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266
+X7=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer
+X8=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv
+X9=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040
+XA=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21
+XB=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51
+XC=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl
+XD=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense
+XE=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
+EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)
 
 
 
