@@ -1,13 +1,19 @@
 BOARD=esp32s3x
 MONITOR_SPEED=921600
-LIBS = /home/jim/Arduino/libraries/LovyanGFX/src
 
 GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
 BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
-#-DFLASH_MODE=qio -DFLASH_SPEED=80m -DPART_FILE=/home/jim/.arduino15/packages/esp32/hardware/esp32/2.0.15/tools/partitions/huge_app.csv 
 
-#EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
-EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX|/home/jim/Arduino/libraries/TFT_eSPI/Extensions/|/home/jim/Arduino/libraries/TFT_eSPI/Fonts/|/home/jim/Arduino/libraries/TFT_eSPI/Processors
+EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/common.hpp|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/device.hpp|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
+
+
+
+
+# for esp32dax
+#EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX|/home/jim/Arduino/libraries/TFT_eSPI/Extensions/|/home/jim/Arduino/libraries/TFT_eSPI/Fonts/|/home/jim/Arduino/libraries/TFT_eSPI/Processors
+
+# for esp32s3x
+#EXCLUDE_DIRS=/home/jim/Arduino/libraries/TFT_eSPI/Extensions/|/home/jim/Arduino/libraries/TFT_eSPI/Fonts/|/home/jim/Arduino/libraries/TFT_eSPI/Processors
 
 CHIP=esp32
 OTA_ADDR=192.168.5.189
