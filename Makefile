@@ -1,14 +1,13 @@
-BOARD=esp32s3
+BOARD=esp32dax
 MONITOR_SPEED=921600
 
 GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
-BUILD_EXTRA_FLAGS += -DBOARD_HAS_PSRAM -DGIT_VERSION=\"$(GIT_VERSION)\"
-#EXCLUDE_DIRS=/home/jim/Arduino/libraries/TFT_eSPI/|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
+BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
+#-DFLASH_MODE=qio -DFLASH_SPEED=80m -DPART_FILE=/home/jim/.arduino15/packages/esp32/hardware/esp32/2.0.15/tools/partitions/huge_app.csv 
 
+#EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
+EXCLUDE_DIRS=/home/jim/Arduino/libraries/LovyanGFX|/home/jim/Arduino/libraries/TFT_eSPI/Extensions/|/home/jim/Arduino/libraries/TFT_eSPI/Fonts/|/home/jim/Arduino/libraries/TFT_eSPI/Processors
 
-backtrace:
-	tr ' ' '\n' | /home/jim/.arduino15/packages/esp32/tools/xtensa-esp32-elf-gcc/*/bin/xtensa-esp32-elf-addr2line -f -i -e ${BUILD_DIR}/${MAIN_NAME}.elf
-	
 CHIP=esp32
 OTA_ADDR=192.168.5.189
 IGNORE_STATE=1
@@ -25,16 +24,6 @@ socat:
 	socat udp-recv:9000 - 
 mocat:
 	mosquitto_sub -h 192.168.5.1 -t "${MAIN_NAME}/#" -F "%I %t %p"   
-
-curl: ${BUILD_DIR}/${MAIN_NAME}.bin
-	curl -v --limit-rate 10k --progress-bar -F "image=@${BUILD_DIR}/${MAIN_NAME}.bin" ${OTA_ADDR}/update  > /dev/null
-
-
-crctest:
-	gcc -o crc16heater_test crc16heater_test.c crc16heater.c
-	echo Should show fb1b0400230a280100
-	./crc16heater_test fb1b0400230a280100
-
 
 ${MAIN_NAME}_csim:	${MAIN_NAME}.ino ${HOME}/Arduino/libraries/jimlib/src/jimlib.h ${HOME}/Arduino/libraries/jimlib/src/ESP32sim_ubuntu.h
 	g++  -DGIT_VERSION=\"$(GIT_VERSION)\" -x c++ -g $< -o $@ -DESP32 -DUBUNTU -I./ -I${HOME}/Arduino/libraries/jimlib/src 

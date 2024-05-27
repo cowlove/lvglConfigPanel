@@ -1,17 +1,20 @@
 // Uncomment one of the following display boards:
-//#include "elecrow5.h"
-#include "elecrow7.h"
+//#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
+#include "elecrow23.h"      // use ESP32-WROOM-DA board type, huge app partition, needs manual boot button 
+//#include "elecrow7.h"    // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "waveshare43.h"
 //#include "lilgoRGB.h"
 
 #include <Arduino.h>
 #include "WiFiClient.h"
 
+#ifndef GIT_VERSION
 #define GIT_VERSION "gitversion"
-#include "/home/jim/Arduino/libraries/jimlib/src/jimlib.h"
-#include "/home/jim/Arduino/libraries/jimlib/src/espNowMux.h"
-#include "/home/jim/Arduino/libraries/jimlib/src/reliableStream.h"
-#include "/home/jim/Arduino/libraries/jimlib/src/confPanel.h"
+#endif
+#include "jimlib.h"
+#include "espNowMux.h"
+#include "reliableStream.h"
+#include "confPanel.h"
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
 static const lv_font_t *default_font = &lv_font_montserrat_32;
@@ -134,8 +137,8 @@ public:
     lv_obj_t *l = lv_obj_get_child(multBut, 0);
     if (l == NULL)
       return;
-    string s("HEY!");
-    espNowMux.send("g5", (uint8_t *)s.c_str(), s.length());
+    //string s("HEY!");
+    //espNowMux.send("g5", (uint8_t *)s.c_str(), s.length());
     const char *t = lv_label_get_text(l);
     int v;
     if (t != NULL && sscanf(t, "%dX", &v) == 1) {
@@ -417,6 +420,24 @@ public:
   int expectedSchemaLength = 0;
   int tileCount = 0;
   int schemaFlags = 0;
+  lv_obj_t *createTile()  {
+      if (tileview == NULL) {
+        tileview = lv_tileview_create(lv_scr_act());
+        lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
+      }
+      return lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
+  }
+
+  void createWelcomeTile()  { 
+      lv_obj_t *obj = createTile();
+      lv_obj_t *label = lv_label_create(obj);
+      lv_label_set_text_fmt(label, "WELCOMEX");
+      lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
+      lv_obj_center(label);
+      //lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
+  }
   void onRecv(const char *buf, int n) {
     string x;
     x.assign(buf, n);
@@ -431,14 +452,9 @@ public:
           //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
           vector<string> slines = split(schema.c_str(), "\n");
           if (slines.size() == expectedSchemaLength) {
-            if (tileview == NULL) {
-              tileview = lv_tileview_create(lv_scr_act());
-              lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-              lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
-            }
-            panels.push_back(new ConfPanel(schema_idx, schema, lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM)));
+            panels.push_back(new ConfPanel(schema_idx, schema, createTile()));
             if (schemaFlags & 0x1) {
-              lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
+              createTile();
             }
             Serial.printf("Received valid schema length %d\n", slines.size());
           } else {
@@ -469,12 +485,13 @@ ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
-  Serial.begin(921600, SERIAL_8N1); /* prepare for possible serial debug */
+  Serial.begin(115200, SERIAL_8N1); /* prepare for possible serial debug */
   panel_setup();
   //lv_demo_widgets();
   //lv_timer_handler();
   j.mqtt.active = false;
   j.jw.enabled = false;
+  cpt.createWelcomeTile();
 }
 
 void loop() {
