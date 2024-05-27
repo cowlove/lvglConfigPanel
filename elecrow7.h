@@ -11,10 +11,9 @@
 #include <demos/lv_demos.h>
 #include <examples/lv_examples.h>
 #define LGFX_USE_V1
-#include <LovyanGFX.hpp>
+#include <LovyanGFX.h>
 #include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
-#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
- 
+#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp> 
 #define TFT_BL 2
 
 class LGFX : public lgfx::LGFX_Device {

@@ -1,5 +1,6 @@
-BOARD=esp32dax
+BOARD=esp32s3x
 MONITOR_SPEED=921600
+LIBS = /home/jim/Arduino/libraries/LovyanGFX/src
 
 GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
 BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
