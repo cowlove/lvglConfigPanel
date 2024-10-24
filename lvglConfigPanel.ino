@@ -478,26 +478,27 @@ public:
   }
 };
 
-JStuff j;
+//JStuff j; // Jstuff seems to disable to makeEspArduino build dunno 
 
-//ReliableTcpClient client("0.0.0.0", 4444);
+//NO ReliableTcpClient client("0.0.0.0", 4444);
 ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
+  delay(1500);
   Serial.begin(115200, SERIAL_8N1); 
-  Serial.println("HI");
+  Serial.println("Entering begin()");
+  //j.mqtt.active = j.jw.enabled = false;
   panel_setup();
-  //lv_demo_widgets();
-  //lv_timer_handler();
-  j.mqtt.active = false;
-  j.jw.enabled = false;
+  
+  lv_demo_widgets();
   //cpt.createWelcomeTile();
 }
 
 void loop() {
-  j.run();
+  //j.run();
   cpt.run();
   lv_timer_handler();
+  //Serial.println("loop()");
   delay(1);
 }

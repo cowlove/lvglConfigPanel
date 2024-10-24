@@ -1,5 +1,5 @@
 Compiling and uploading with arduino-cli:
-arduino-cli compile -b esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=opi ~/Arduino/lvglConfigPanel/ --port /dev/ttyACM0 -v -u
+arduino-cli compile -b esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=opi --port /dev/ttyUSB0 -v -u
 needs esp32 board versions < 3.0 
 
 needs specific versions of arduino libraries: 
