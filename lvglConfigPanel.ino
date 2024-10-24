@@ -1,8 +1,8 @@
 // Uncomment one of the following display boards:
-//#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
+#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "elecrow23.h"      // use ESP32-WROOM-DA board type, huge app partition, needs manual boot button 
 //#include "elecrow7.h"    // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
-#include "waveshare43.h"
+//#include "waveshare43.h"
 //#include "lilgoRGB.h"
 
 #include <Arduino.h>
@@ -485,7 +485,8 @@ ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
-  Serial.begin(115200, SERIAL_8N1); /* prepare for possible serial debug */
+  Serial.begin(115200, SERIAL_8N1); 
+  Serial.println("HI");
   panel_setup();
   //lv_demo_widgets();
   //lv_timer_handler();
