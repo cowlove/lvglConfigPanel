@@ -1,4 +1,9 @@
 # Trying to build for the ele
+# OOPS I forgot to document this.  The only way this works with the PSRAM OPI option is to run this command
+# on the /tmp/mkESP/*/arduino.mk file right after it has been created
+# by modifying makeEspArduino.mk
+#            sed -i 's/qspi/opi/' $(ARDUINO_MK) 
+ 
 
 BOARD=esp32s3
 MONITOR_SPEED=115200
