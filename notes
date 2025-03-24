@@ -1,3 +1,4 @@
+
 03/24/25 Compiles and works on a fresh vagrant box with setup.sh and ./make_build..
 with the following cores/libs.  Also works after upgrading LovyanGFX to 1.2.0
 
