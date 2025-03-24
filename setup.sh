@@ -35,6 +35,9 @@ arduino-cli lib install ArduinoOTA PubSubClient HTTPClient OneWireNg \
 
 mkdir -p ${HOME}/Arduino/libraries 
 cd ${HOME}/Arduino/libraries 
+git config --global user.name "Jim Evans"
+git config --global user.email "jim@vheavy.com"
+
 git clone https://github.com/plerup/makeEspArduino.git
 git clone https://github.com/cowlove/esp32jimlib.git
 
@@ -43,7 +46,7 @@ cp /vagrant/MOVE_TO_LIBRARIES_lv_conf.h ~/Arduino/libraries/lv_conf.h
 ln -s ../demos ../examples ~/Arduino/libraries/lvgl/src/
 
 cd ${HOME}
-git clone https://github.com/cowlove/lvglConfigPanel.git
+git clone git@github.com:cowlove/lvglConfigPanel.git
 
 
 # makeEspArduino needs needs a preferences.txt file 
