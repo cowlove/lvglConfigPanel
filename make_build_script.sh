@@ -1,16 +1,23 @@
 #!/bin/bash
-BOARD=esp32s3
-TMP=/tmp/arduino/$$.txt
 PORT=/dev/ttyUSB0
+BOARD=esp32s3
 BOARD_OPTS=PartitionScheme=huge_app,PSRAM=opi
 
-cd `dirname $0`
-arduino-cli compile  -v \
-    -b esp32:esp32:${BOARD} --board-options ${BOARD_OPTS} -u --port ${PORT} \
-	 | tee $TMP
 
-SKETCH=`basename \`pwd\``
-SKETCHDIR=/tmp/arduino/sketches/`rematch '/tmp/arduino/sketches/([A-Z0-9]+)/' $TMP | head -1`
+cd "`dirname $0`"
+SKETCH="`basename \`pwd\``"
+BUILDDIR="/tmp/arduino/${SKETCH}/${BOARD}"
+TMP="${BUILDDIR}/$$.txt"
+mkdir -p "${BUILDDIR}"
+arduino-cli compile -e -v -b esp32:esp32:${BOARD} --build-path ${BUILDDIR} \
+  --board-options ${BOARD_OPTS} -u -p ${PORT}\
+	 | tee "$TMP"
+
+ls /tmp/arduino/sketches && BASEDIR=/tmp/arduino/sketches
+ls ${HOME}/.cache/arduino/sketches && BASEDIR=${HOME}/.cache/arduino/sketches
+
+#SKETCHDIR=/tmp/arduino/sketches/`rematch '/tmp/arduino/sketches/([A-Z0-9]+)/' $TMP | head -1`
+SKETCHDIR="$BUILDDIR"
 SKETCHCPP="${SKETCHDIR}/sketch/${SKETCH}.ino.cpp"
 OUT=./build-${BOARD}.sh
 
@@ -36,7 +43,10 @@ fi
 
 if [[ \$OPT == *l* ]]; then
 	echo Linking...
-	time ( set -e; $LINK_CMD1; $LINK_CMD2; $LINK_CMD3; $LINK_CMD4 ) 
+	$LINK_CMD1
+	$LINK_CMD2
+	$LINK_CMD3
+	$LINK_CMD4  
 fi
 
 if [[ \$OPT == *u* ]]; then

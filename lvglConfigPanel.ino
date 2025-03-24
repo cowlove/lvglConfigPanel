@@ -433,7 +433,7 @@ public:
   void createWelcomeTile()  { 
       lv_obj_t *obj = createTile();
       lv_obj_t *label = lv_label_create(obj);
-      lv_label_set_text_fmt(label, "WELCOME JIMMY! 88888");
+      lv_label_set_text_fmt(label, "WELCOME JIMMY! 1111");
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
       lv_obj_center(label);
