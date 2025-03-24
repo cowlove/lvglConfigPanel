@@ -1,3 +1,23 @@
+03/24/25 Compiles and works on a fresh vagrant box with setup.sh and ./make_build..
+with the following cores/libs.  Also works after upgrading LovyanGFX to 1.2.0
+
+	vagrant@vagrant:~$ arduino-cli core list; arduino-cli lib list
+	ID          Installed Latest Name
+	esp32:esp32 2.0.17    3.1.3  esp32
+
+	Name         Installed Available Location Description
+	ArduinoOTA   1.1.0     -         user     -
+	HttpClient   2.2.0     -         user     -
+	jimlib       2.1.4     -         user     -
+	LovyanGFX    1.1.8     1.2.0     user     TFT LCD Graphics driver with touch fo...
+	lvgl         8.3.11    9.2.2     user     Full-featured Graphics Library for Em...
+	OneWireNg    0.14.0    -         user     -
+	PubSubClient 2.8       -         user     -
+	TAMC_GT911   1.0.2     -         user     -
+
+
+
+
 Compiling and uploading with arduino-cli:
 arduino-cli compile -b esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=opi --port /dev/ttyUSB0 -v -u
 needs esp32 board versions < 3.0 
