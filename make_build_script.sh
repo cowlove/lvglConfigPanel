@@ -6,7 +6,7 @@ BOARD_OPTS=PartitionScheme=huge_app,PSRAM=opi
 
 cd `dirname $0`
 arduino-cli compile  -v \
-    -b esp32:esp32:${BOARD} --board-options ${BOARD_OPTS} -u --port ${PORT} --build-cache-path core.a \
+    -b esp32:esp32:${BOARD} --board-options ${BOARD_OPTS} -u --port ${PORT} \
 	 | tee $TMP
 
 SKETCH=`basename \`pwd\``
@@ -16,9 +16,10 @@ OUT=./build-${BOARD}.sh
 
 # TODO: this is missing a link command        
 COMPILE_CMD=`egrep "[-]o ${SKETCHCPP}.o" $TMP`
-LINK_CMD1=`egrep "[-]o ${SKETCHDIR}/${SKETCH}.ino.elf" $TMP`
-LINK_CMD2=`grep esptool_py $TMP | grep -v ${PORT} | head -1 | tr '\n' ' '`
-LINK_CMD2=`grep esptool_py $TMP | grep -v ${PORT} | tail -1 | tr '\n' ' '`
+LINK_CMD1=`egrep " cr ${SKETCHDIR}/sketch/objs.a" $TMP`
+LINK_CMD2=`egrep "[-]o ${SKETCHDIR}/${SKETCH}.ino.elf" $TMP`
+LINK_CMD3=`grep esptool_py $TMP | grep -v ${PORT} | head -1 | tr '\n' ' '`
+LINK_CMD4=`grep esptool_py $TMP | grep -v ${PORT} | tail -1 | tr '\n' ' '`
 UPLOAD_CMD=`grep esptool_py $TMP | grep ${PORT} | tr '\n' ' '`
 
 cat <<END > $OUT
@@ -35,7 +36,7 @@ fi
 
 if [[ \$OPT == *l* ]]; then
 	echo Linking...
-	time ( set -e; $LINK_CMD1; $LINK_CMD2; $LINK_CMD3 ) 
+	time ( set -e; $LINK_CMD1; $LINK_CMD2; $LINK_CMD3; $LINK_CMD4 ) 
 fi
 
 if [[ \$OPT == *u* ]]; then
@@ -54,4 +55,4 @@ fi;
 END
 
 chmod 755 $OUT
-rm -f $TMP
+#rm -f $TMP

@@ -429,14 +429,15 @@ public:
       }
       return lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
   }
-
+  lv_obj_t *welcomeLabel = NULL;
   void createWelcomeTile()  { 
       lv_obj_t *obj = createTile();
       lv_obj_t *label = lv_label_create(obj);
-      lv_label_set_text_fmt(label, "WELCOME JIM");
+      lv_label_set_text_fmt(label, "WELCOME JIMMY! 88888");
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
       lv_obj_center(label);
+      welcomeLabel = label;
       //lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
   }
   void onRecv(const char *buf, int n) {
@@ -458,6 +459,8 @@ public:
               createTile();
             }
             Serial.printf("Received valid schema length %d\n", slines.size());
+            if (welcomeLabel != NULL)
+              lv_label_set_text_fmt(welcomeLabel, sfmt("CONNECTED (%.3f sec)", millis() / 1000.0).c_str());
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
             stream->write("SCHEMA\n");
@@ -500,7 +503,7 @@ void setup() {
   panel_setup();
   
   //lv_demo_widgets();
-  //cpt.createWelcomeTile();
+  cpt.createWelcomeTile();
 }
 
 void loop() {
