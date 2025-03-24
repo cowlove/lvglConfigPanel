@@ -4,6 +4,10 @@
 if [ ! -d /vagrant ]; then 
 	vagrant init hashicorp/bionic64
 	vagrant up
+	vagrant plugin list | grep vagrant-scp || vagrant plugin install vagrant-scp
+	vagrant ssh -c "mkdir -p bin/ .arduino15/"
+	vagrant scp ~/bin/arduino-cli bin/arduino-cli
+	vagrant scp ~/.arduino15/staging .arduino15/
 	vagrant ssh -c /vagrant/setup.sh
 	exit
 fi
