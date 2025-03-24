@@ -1,12 +1,13 @@
 // Uncomment one of the following display boards:
-#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
+//#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "elecrow23.h"      // use ESP32-WROOM-DA board type, huge app partition, needs manual boot button 
-//#include "elecrow7.h"    // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
+#include "elecrow7.h"    // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "waveshare43.h"
 //#include "lilgoRGB.h"
 
 #include <Arduino.h>
 #include "WiFiClient.h"
+#define ESP32CORE_V2
 
 #ifndef GIT_VERSION
 #define GIT_VERSION "gitversion"
@@ -432,7 +433,7 @@ public:
   void createWelcomeTile()  { 
       lv_obj_t *obj = createTile();
       lv_obj_t *label = lv_label_create(obj);
-      lv_label_set_text_fmt(label, "WELCOMEX");
+      lv_label_set_text_fmt(label, "WELCOME JIM");
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
       lv_obj_center(label);
@@ -485,13 +486,20 @@ ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
-  delay(1500);
-  Serial.begin(115200, SERIAL_8N1); 
+  //delay(1500);
+  //j.begin();
+  //j.run();                
+  espNowMux.defaultChannel = 4;
+  //espNowMux.stop();
+  espNowMux.firstInit = true;
+
+
+  Serial.begin(115200/*, SERIAL_8N1*/); 
   Serial.println("Entering begin()");
   //j.mqtt.active = j.jw.enabled = false;
   panel_setup();
   
-  lv_demo_widgets();
+  //lv_demo_widgets();
   //cpt.createWelcomeTile();
 }
 
