@@ -37,9 +37,11 @@ mkdir -p ${HOME}/Arduino/libraries
 cd ${HOME}/Arduino/libraries 
 git config --global user.name "Jim Evans"
 git config --global user.email "jim@vheavy.com"
+printf "Host *\n StrictHostKeyChecking no" >> ~/.ssh/config
+chmod 600 ~/.ssh/config
 
 git clone https://github.com/plerup/makeEspArduino.git
-git clone https://github.com/cowlove/esp32jimlib.git
+git clone git@github.com:cowlove/esp32jimlib.git
 
 # Fix up lvgl library 
 cp /vagrant/MOVE_TO_LIBRARIES_lv_conf.h ~/Arduino/libraries/lv_conf.h
