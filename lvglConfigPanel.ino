@@ -382,7 +382,7 @@ class ConfPanelTransportScreen {
   HzTimer schemaRequestTimer, runTimer;
 public:
   ConfPanelTransportScreen(ReliableStreamInterface *s)
-    : stream(s), schemaRequestTimer(0.3), runTimer(5) {}
+    : stream(s), schemaRequestTimer(3), runTimer(5) {}
   void run() {
     string s;
     for (auto p : panels) {
@@ -397,7 +397,8 @@ public:
         p->run();
       }
     }
-    if (panels.size() == 0 && schemaRequestTimer.tick()) { 
+    if (panels.size() == 0 && schemaRequestTimer.tick()) {
+      printf("Requesting schema...\n"); 
       stream->write("SCHEMA\n");
       lastSchemaRequestTime = millis();
     }
