@@ -351,23 +351,6 @@ public:
   }
 };
 
-class HzTimer { 
-public:
-  HzTimer(float h) : hertz(h) {}
-  bool force = true;
-  float hertz;
-  uint32_t last = 0;
-  bool hz(float h) {
-    bool rval = force || (millis() - last) > 1000.0 / h;
-    if (rval) {
-        last = millis();
-        force = false;
-    }
-    return rval;
-  }
-  bool tick() { return hz(hertz); }
-};
-
 class ConfPanelTransportScreen {
   WiFiUDP udp;
   ReliableStreamInterface *stream;
