@@ -2,3 +2,5 @@ build
 build*.sh
 .vagrant
 Vagrantfile
+*.out
+esp*.mk

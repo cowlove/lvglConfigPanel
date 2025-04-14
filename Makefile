@@ -1,55 +1,81 @@
-# Trying to build for the ele
-# OOPS I forgot to document this.  The only way this works with the PSRAM OPI option is to run this command
-# on the /tmp/mkESP/*/arduino.mk file right after it has been created
-# by modifying makeEspArduino.mk
-#            sed -i 's/qspi/opi/' $(ARDUINO_MK) 
- 
+BOARD = esp32s3
+PORT = /dev/ttyUSB0
+BOARD_OPTIONS = PartitionScheme=huge_app,PSRAM=opi
 
-BOARD=esp32s3
-MONITOR_SPEED=115200
+GIT_VERSION := "$(shell git describe --abbrev=6 --dirty --always)"
+EXTRA_CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+SKETCH_NAME=$(shell basename `pwd`)
+CCACHE=ccache
+MAKEFLAGS=-j4 
 
-GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always --tags)"
-BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
-BUILD_EXTRA_FLAGS += -DARDUINO_PARTITION_huge_app -DBOARD_HAS_PSRAM
-#BUILD_EXTRA_FLAGS += -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD=\"ESP32S3_DEV\" -DARDUINO_VARIANT=\"esp32s3\" -DARDUINO_PARTITION_huge_app -DESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/build_opt.h @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/file_opts 
+usage:
+	@echo make \{elf,bin,upload,cat,uc\(upload then cat\),csim,clean,csim-clean\}
 
-LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Panel_RGB.cpp 
-LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Bus_RGB.cpp
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_lvgl_logo.c
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_demo_widgets_avatar.c
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_clothes.c
+include ${BOARD}.mk
 
-X0=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx_user
-X1=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0
-X2=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default
-X3=
-#|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32
-X4=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3
-X5=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2
-XF=
-#|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3
-X6=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266
-X7=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer
-X8=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv
-X9=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040
-XA=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21
-XB=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51
-XC=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl
-XD=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense
-XE=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
-EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)
-
-
-
-CHIP=esp32
-include ${HOME}/Arduino/libraries/makeEspArduino/makeEspArduino.mk
+${BOARD}.mk:
+	@echo Running arduino-cli compile --clean, this could take a while.  Upload failure is OK.
+	arduino-cli -v compile --clean --build-path ./build/${BOARD}/ \
+		-b esp32:esp32:${BOARD} --board-options ${BOARD_OPTIONS} \
+		-u -p ${PORT} | bin/cli-parser.py > ${BOARD}.mk
 
 fixtty:
-	stty -F ${UPLOAD_PORT} -hupcl -crtscts -echo raw  ${MONITOR_SPEED}
+	stty -F ${PORT} -hupcl -crtscts -echo raw 115200
+cat:    fixtty
+	cat ${PORT} | tee ./cat.out
+socat:  
+	socat udp-recvfrom:9000,fork - 
+mocat:
+	mosquitto_sub -h rp1.local -t "${MAIN_NAME}/#" -F "%I %t %p"   
+uc:
+	${MAKE} upload && ${MAKE} cat
 
-cat:	fixtty
-	cat ${UPLOAD_PORT}
+backtrace:
+	tr ' ' '\n' | addr2line -f -i -e ./build/${BOARD}/*.elf
 
-climake:
-	arduino-cli compile -b esp32:esp32:esp32s3:PartitionScheme=huge_app,PSRAM=opi --port /dev/ttyUSB0 -v -u
+clean-all:
+	rm -rf ./build
+	rm -f ./esp32*.mk
+	${MAKE} csim-clean
+
+##############################################
+# CSIM rules 
+
+CSIM_BUILD_DIR=./build/csim
+CSIM_LIBS=esp32jimlib Arduino_CRC32 ArduinoJson
+CSIM_SRC_DIRS=$(foreach L,$(CSIM_LIBS),${HOME}/Arduino/libraries/${L}/src)
+CSIM_SRCS=$(foreach DIR,$(CSIM_SRC_DIRS),$(wildcard $(DIR)/*.cpp)) 
+CSIM_SRC_WITHOUT_PATH = $(notdir $(CSIM_SRCS))
+CSIM_OBJS=$(CSIM_SRC_WITHOUT_PATH:%.cpp=${CSIM_BUILD_DIR}/%.o)
+CSIM_INC=$(foreach DIR,$(CSIM_SRC_DIRS),-I${DIR})
+
+CSIM_CFLAGS+=-g -MMD -fpermissive -DGIT_VERSION=\"${GIT_VERSION}\" -DESP32 -DCSIM -DUBUNTU 
+#CSIM_CFLAGS+=-DGPROF=1 -pg
+#CSIM_CFLAGS+=-O2
+
+${CSIM_BUILD_DIR}/%.o: %.cpp 
+	echo $@
+	${CCACHE} g++ ${CSIM_CFLAGS} -x c++ -c ${CSIM_INC} $< -o $@
+
+${CSIM_BUILD_DIR}/%.o: %.ino
+	echo $@
+	${CCACHE} g++ ${CSIM_CFLAGS} -x c++ -c ${CSIM_INC} $< -o $@
+
+${SKETCH_NAME}_csim: ${CSIM_BUILD_DIR} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o
+	echo $@
+	g++ -g ${CSIM_CFLAGS} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o -o $@         
+
+csim: ${SKETCH_NAME}_csim 
+	cp $< $@
+
+${CSIM_BUILD_DIR}:
+	mkdir -p ${CSIM_BUILD_DIR}
+
+VPATH = $(sort $(dir $(CSIM_SRCS)))
+
+.PHONY: csim-clean
+csim-clean:
+	rm -f ${CSIM_BUILD_DIR}/*.[od] ${SKETCH_NAME}_csim csim
+
+-include ${CSIM_BUILD_DIR}/*.d
 
