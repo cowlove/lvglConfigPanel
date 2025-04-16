@@ -417,7 +417,7 @@ public:
   void createWelcomeTile()  { 
       lv_obj_t *obj = createTile();
       lv_obj_t *label = lv_label_create(obj);
-      lv_label_set_text_fmt(label, "WELCOME JIMMY! 2222");
+      lv_label_set_text_fmt(label, "WELCOME JIMMY! xx");
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
       lv_obj_center(label);
@@ -476,7 +476,7 @@ void setup() {
   //delay(1500);
   //j.begin();
   //j.run();                
-  espNowMux.defaultChannel = 4;
+  espNowMux.defaultChannel = 11;
   //espNowMux.stop();
   espNowMux.firstInit = true;
 
