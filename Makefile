@@ -1,49 +1,62 @@
-BOARD = esp32s3
-PORT = /dev/ttyUSB0
-BOARD_OPTIONS = PartitionScheme=huge_app,PSRAM=opi
+BOARD ?= esp32s3
+PORT ?= /dev/ttyACM0
+CHIP ?= esp32
+ESP_ROOT=${HOME}/esp32
+LIBS=$(foreach L,esp32jimlib Arduino_CRC32 Adafruit_HX711 PubSubClient \
+	OneWireNg ArduinoJson DHT_sensor_library Adafruit_Unified_Sensor \
+        TAMC_GT911 LovyanGFX lvgl esp32-micro-sdcard\
+	,${HOME}/Arduino/libraries/${L})
+
+UPLOAD_PORT ?= /dev/ttyACM0
+BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
+BUILD_EXTRA_FLAGS += -DARDUINO_PARTITION_huge_app -DBOARD_HAS_PSRAM
+#BUILD_EXTRA_FLAGS += -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD=\"ESP32S3_DEV\" -DARDUINO_VARIANT=\"esp32s3\" -DARDUINO_PARTITION_huge_app -DESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/build_opt.h @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/file_opts 
+
+LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Panel_RGB.cpp 
+LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Bus_RGB.cpp
+LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_lvgl_logo.c
+LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_demo_widgets_avatar.c
+LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_clothes.c
+
+X0=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx_user
+X1=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0
+X2=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default
+X3=
+#|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32
+X4=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3
+X5=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2
+XF=
+#|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3
+X6=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266
+X7=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer
+X8=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv
+X9=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040
+XA=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21
+XB=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51
+XC=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl
+XD=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense
+XE=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
+XF=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
+XG=|/home/jim/Arduino/libraries/LovyanGFX/examples
+EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)
+
+
 
 GIT_VERSION := "$(shell git describe --abbrev=6 --dirty --always)"
+
+
 EXTRA_CFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 SKETCH_NAME=$(shell basename `pwd`)
-CCACHE=ccache
-MAKEFLAGS=-j4 
+BOARD_OPTIONS = PartitionScheme=min_spiffs
 
-usage:
-	@echo make \{elf,bin,upload,cat,uc\(upload then cat\),csim,clean,csim-clean\}
 
-include ${BOARD}.mk
-
-${BOARD}.mk:
-	@echo Running arduino-cli compile --clean, this could take a while.  Upload failure is OK.
-	arduino-cli -v compile --clean --build-path ./build/${BOARD}/ \
-		-b esp32:esp32:${BOARD} --board-options ${BOARD_OPTIONS} \
-		-u -p ${PORT} | bin/cli-parser.py > ${BOARD}.mk
-
-fixtty:
-	stty -F ${PORT} -hupcl -crtscts -echo raw 115200
-cat:    fixtty
-	cat ${PORT} | tee ./cat.out
-socat:  
-	socat udp-recvfrom:9000,fork - 
-mocat:
-	mosquitto_sub -h rp1.local -t "${MAIN_NAME}/#" -F "%I %t %p"   
-uc:
-	${MAKE} upload && ${MAKE} cat
-
-backtrace:
-	tr ' ' '\n' | addr2line -f -i -e ./build/${BOARD}/*.elf
-
-clean-all:
-	${MAKE} csim-clean
-	rm -rf ./build
-	rm -f ./esp32*.mk
-
-##############################################
-# CSIM rules 
-
+ifeq ($(BOARD),csim)
 CSIM_BUILD_DIR=./build/csim
-CSIM_LIBS=esp32jimlib Arduino_CRC32 ArduinoJson
+CSIM_LIBS=Arduino_CRC32 ArduinoJson Adafruit_HX711 esp32jimlib
+CSIM_LIBS+=esp32csim
 CSIM_SRC_DIRS=$(foreach L,$(CSIM_LIBS),${HOME}/Arduino/libraries/${L}/src)
+CSIM_SRC_DIRS+=$(foreach L,$(CSIM_LIBS),${HOME}/Arduino/libraries/${L})
+CSIM_SRC_DIRS+=$(foreach L,$(CSIM_LIBS),${HOME}/Arduino/libraries/${L}/src/csim_include)
 CSIM_SRCS=$(foreach DIR,$(CSIM_SRC_DIRS),$(wildcard $(DIR)/*.cpp)) 
 CSIM_SRC_WITHOUT_PATH = $(notdir $(CSIM_SRCS))
 CSIM_OBJS=$(CSIM_SRC_WITHOUT_PATH:%.cpp=${CSIM_BUILD_DIR}/%.o)
@@ -78,4 +91,20 @@ csim-clean:
 	rm -f ${CSIM_BUILD_DIR}/*.[od] ${SKETCH_NAME}_csim csim
 
 -include ${CSIM_BUILD_DIR}/*.d
+else
+	include ~/Arduino/libraries/makeEspArduino/makeEspArduino.mk
+endif
+
+cat:    
+	while sleep .01; do if [ -c ${PORT} ]; then stty -F ${PORT} -echo raw 115200 && cat ${PORT}; fi; done  | tee ./cat.`basename ${PORT}`.out
+socat:  
+	socat udp-recvfrom:9000,fork - 
+mocat:
+	mosquitto_sub -h rp1.local -t "${MAIN_NAME}/#" -F "%I %t %p"   
+uc:
+	${MAKE} upload && ${MAKE} cat
+
+backtrace:
+	tr ' ' '\n' | addr2line -f -i -e ./build/${BOARD}/*.elf
+
 

@@ -18,7 +18,7 @@
 #include "confPanel.h"
 
 #if ESP_ARDUINO_VERSION_MINOR >= 2
-#error esp32 core 3.2.0 breaks with some i2c errors, use 3.1.3
+//#error esp32 core 3.2.0 breaks with some i2c errors, use 3.1.3
 #endif
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
