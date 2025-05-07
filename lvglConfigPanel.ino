@@ -415,17 +415,29 @@ public:
         lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
         lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
       }
-      return lv_tileview_add_tile(tileview, tileCount++, 0, LV_DIR_HOR | LV_DIR_BOTTOM);
+      return lv_tileview_add_tile(tileview, tileCount++, 0, (lv_dir_t)(LV_DIR_HOR | LV_DIR_BOTTOM));
   }
   lv_obj_t *welcomeLabel = NULL;
+  static void btn_reset(lv_event_t *e) {
+    ESP.restart();
+  }
   void createWelcomeTile()  { 
-      lv_obj_t *obj = createTile();
-      lv_obj_t *label = lv_label_create(obj);
+      lv_obj_t *tile = createTile();
+      lv_obj_t *label = lv_label_create(tile);
       lv_label_set_text_fmt(label, "WELCOME JIMMY! xx");
       lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
       lv_obj_set_style_text_color(label, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
       lv_obj_center(label);
       welcomeLabel = label;
+
+      lv_obj_t *but = lv_btn_create(tile);
+      label = lv_label_create(but);
+      lv_label_set_text_fmt(label, "RESET");
+      lv_obj_set_style_text_font(label, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_center(label);
+ 
+      lv_obj_add_event_cb(but, btn_reset, LV_EVENT_CLICKED, 0);
+
       //lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
   }
   void onRecv(const char *buf, int n) {
@@ -490,14 +502,17 @@ void setup() {
   //j.mqtt.active = j.jw.enabled = false;
   panel_setup();
   
-  //lv_demo_widgets();
   cpt.createWelcomeTile();
+  //lv_demo_widgets();
 }
 
 void loop() {
   //j.run();
   cpt.run();
+  bool toggle = ( millis() / 1000) % 2 == 1;
+  lv_obj_set_style_text_color(cpt.welcomeLabel, lv_palette_main(toggle ? LV_PALETTE_RED : LV_PALETTE_GREEN), LV_PART_MAIN);
   lv_timer_handler();
-  //Serial.println("loop()");
+  lv_tick_inc(1);
+  //Serial.printf("loop() %d\n", (int)toggle);
   delay(1);
 }

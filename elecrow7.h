@@ -88,17 +88,30 @@ LGFX lcd;
 /* Change to your screen resolution */
 static uint32_t screenWidth;
 static uint32_t screenHeight;
-static lv_disp_draw_buf_t draw_buf;
-//static lv_color_t *disp_draw_buf;
 static lv_color_t disp_draw_buf[800 * 480 / 10];
-static lv_disp_drv_t disp_drv;
 
+#if LVGL_VERSION_MAJOR >= 9
+void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *pxmap) {
+  uint32_t w = (area->x2 - area->x1 + 1);
+  uint32_t h = (area->y2 - area->y1 + 1);
+  lcd.pushImageDMA(area->x1, area->y1, w, h, (lgfx::rgb565_t*)pxmap);
+  lv_disp_flush_ready(disp);
+}
+#else
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
   uint32_t w = (area->x2 - area->x1 + 1);
   uint32_t h = (area->y2 - area->y1 + 1);
-  lcd.pushImageDMA(area->x1, area->y1, w, h,(lgfx::rgb565_t*)&color_p->full);
+  lcd.pushImageDMA(area->x1, area->y1, w, h, (lgfx::rgb565_t*)&color_p->full);
   lv_disp_flush_ready(disp);
 }
+#endif
+
+
+#if LVGL_VERSION_MAJOR >= 9
+typedef lv_indev_t lv_indev_drv_t;
+#else
+static inline void lv_tick_inc(int) {}
+#endif 
 
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
   if (touch_has_signal()) {
@@ -115,7 +128,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
   {
     data->state = LV_INDEV_STATE_REL;
   }
-  delay(15);
+  //delay(15);
 }
 
 void panel_setup() { 
@@ -126,20 +139,36 @@ void panel_setup() {
   screenWidth = lcd.width();
   screenHeight = lcd.height();
 
-  lv_disp_draw_buf_init(&draw_buf, disp_draw_buf, NULL, screenWidth * screenHeight / 10); //4
+#if LVGL_VERSION_MAJOR >= 9
+  static lv_draw_buf_t draw_buf;
+  static lv_display_t *disp_drv;
+  disp_drv = lv_display_create(screenWidth, screenHeight);
+  lv_display_set_flush_cb(disp_drv, my_disp_flush);
+  lv_display_set_buffers(disp_drv, disp_draw_buf, NULL, sizeof(disp_draw_buf), 
+    LV_DISPLAY_RENDER_MODE_PARTIAL);
+  static lv_indev_t *indev_drv = lv_indev_create();
+  lv_indev_set_type(indev_drv, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(indev_drv, my_touchpad_read);
+ 
+  
+#else 
+  static lv_disp_draw_buf_t draw_buf;
+  static lv_disp_drv_t disp_drv;
 
+  lv_disp_draw_buf_init(&draw_buf, disp_draw_buf, NULL, screenWidth * screenHeight / 10); //4
   lv_disp_drv_init(&disp_drv);
   disp_drv.hor_res = screenWidth;
   disp_drv.ver_res = screenHeight;
   disp_drv.flush_cb = my_disp_flush;
   disp_drv.draw_buf = &draw_buf;
   lv_disp_drv_register(&disp_drv);
-
   static lv_indev_drv_t indev_drv;
   lv_indev_drv_init(&indev_drv);
   indev_drv.type = LV_INDEV_TYPE_POINTER;
   indev_drv.read_cb = my_touchpad_read;
   lv_indev_drv_register(&indev_drv);
+
+#endif
 
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, 1);

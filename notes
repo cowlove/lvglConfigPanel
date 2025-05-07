@@ -1,3 +1,13 @@
+Setting up lv_
+
+sudo apt-get install libwayland-dev libxkbcommon-dev libwayland-bin wayland-protocols
+git clone https://github.com/lvgl/lv_port_linux.git
+cd lv_port_linux/
+git submodule update --init --recursive
+vi lv_conf.h  #enable LV_USE_X11, disable LV_USE_LINUX_FBDEV
+make -j doesn't work, use i
+cmake -B build && make -C build -j 
+
 
 03/24/25 Compiles and works on a fresh vagrant box with setup.sh and ./make_build..
 with the following cores/libs.  Also works after upgrading LovyanGFX to 1.2.0

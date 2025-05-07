@@ -16,33 +16,42 @@ BUILD_MEMORY_TYPE = qio_opi
 
 #BUILD_EXTRA_FLAGS += -DF_CPU=240000000L -DARDUINO=10607 -DARDUINO_ESP32S3_DEV -DARDUINO_ARCH_ESP32 -DARDUINO_BOARD=\"ESP32S3_DEV\" -DARDUINO_VARIANT=\"esp32s3\" -DARDUINO_PARTITION_huge_app -DESP32 -DCORE_DEBUG_LEVEL=0 -DARDUINO_RUNNING_CORE=1 -DARDUINO_EVENT_RUNNING_CORE=1 -DBOARD_HAS_PSRAM -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=0 -DARDUINO_USB_MSC_ON_BOOT=0 -DARDUINO_USB_DFU_ON_BOOT=0 @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/build_opt.h @/tmp/arduino/sketches/15C8E895E625CE8A149B245E655C9A81/file_opts 
 
-LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Panel_RGB.cpp 
-LIBS += /home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3/Bus_RGB.cpp
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_lvgl_logo.c
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_demo_widgets_avatar.c
-LIBS += /home/jim/Arduino/libraries/lvgl/demos/widgets/assets/img_clothes.c
+LGFX=${HOME}/Arduino/libraries/LovyanGFX/src
+LVGL=${HOME}/Arduino/libraries/lvgl
+LIBS += ${LGFX}/lgfx/v1/platforms/esp32s3/Panel_RGB.cpp 
+LIBS += ${LGFX}/lgfx/v1/platforms/esp32s3/Bus_RGB.cpp
+LIBS += ${LVGL}/demos/widgets/assets/img_lvgl_logo.c
+LIBS += ${LVGL}/demos/widgets/assets/img_demo_widgets_avatar.c
+LIBS += ${LVGL}/demos/widgets/assets/img_demo_widgets_avatar.c
+LIBS += ${LVGL}/demos/widgets/assets/img_clothes.c
+LIBS += ${LVGL}/demos/widgets/assets/img_demo_widgets_needle.c
 
-X0=/home/jim/Arduino/libraries/LovyanGFX/src/lgfx_user
-X1=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v0
-X2=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/arduino_default
+X0=${LGFX}/lgfx_user
+X1=|${LGFX}/lgfx/v0
+X2=|${LGFX}/lgfx/v1/platforms/arduino_default
 X3=
 #|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32
-X4=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32c3
-X5=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s2
+X4=|${LGFX}/lgfx/v1/platforms/esp32c3
+X5=|${LGFX}/lgfx/v1/platforms/esp32s2
 XF=
 #|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp32s3
-X6=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/esp8266
-X7=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/framebuffer
-X8=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/opencv
-X9=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/rp2040
-XA=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd21
-XB=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/samd51
-XC=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/sdl
-XD=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/spresense
-XE=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/v1/platforms/stm32
-XF=|/home/jim/Arduino/libraries/LovyanGFX/src/lgfx/internal
-XG=|/home/jim/Arduino/libraries/LovyanGFX/examples
-EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)
+X6=|${LGFX}/lgfx/v1/platforms/esp8266
+X7=|${LGFX}/lgfx/v1/platforms/framebuffer
+X8=|${LGFX}/lgfx/v1/platforms/opencv
+X9=|${LGFX}/lgfx/v1/platforms/rp2040
+XA=|${LGFX}/lgfx/v1/platforms/samd21
+XB=|${LGFX}/lgfx/v1/platforms/samd51
+XC=|${LGFX}/lgfx/v1/platforms/sdl
+XD=|${LGFX}/lgfx/v1/platforms/spresense
+XE=|${LGFX}/lgfx/v1/platforms/stm32
+XF=|${LGFX}/lgfx/internal
+XG=|${HOME}/Arduino/libraries/LovyanGFX/examples
+XH=|${LVGL}/src/libs/thorvg/rapidjson/msinttypes
+XI=|${LVGL}/src/draw/sw/blend/helium
+XJ=|${LVGL}/src/draw/sw/blend/neon
+
+EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)$(XH)$(XI)$(XJ)
+
 
 
 
