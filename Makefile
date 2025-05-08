@@ -75,6 +75,16 @@ CSIM_SRC_WITHOUT_PATH = $(notdir $(CSIM_SRCS))
 CSIM_OBJS=$(CSIM_SRC_WITHOUT_PATH:%.cpp=${CSIM_BUILD_DIR}/%.o)
 CSIM_INC=$(foreach DIR,$(CSIM_SRC_DIRS),-I${DIR})
 
+LVLINUX=${HOME}/src/lv_port_linux
+CSIM_INC+=-I${LVLINUX}/lvgl
+CSIM_INC+=-I${LVLINUX}/src/lib/
+CSIM_LDLIBS += ${LVLINUX}/build/lvgl/lib/liblvgl_demos.a
+CSIM_LDLIBS += ${LVLINUX}/build/liblvgl_linux.a
+CSIM_LDLIBS += ${LVLINUX}/build/lvgl/lib/liblvgl.a
+CSIM_LDLIBS += ${LVLINUX}/build/lvgl/lib/liblvgl_examples.a
+CSIM_LDLIBS += ${LVLINUX}/build/lvgl/lib/liblvgl_thorvg.a
+CSIM_LDLIBS += -lX11
+
 CSIM_CFLAGS+=-g -MMD -fpermissive -DGIT_VERSION=\"${GIT_VERSION}\" -DESP32 -DCSIM -DUBUNTU 
 #CSIM_CFLAGS+=-DGPROF=1 -pg
 #CSIM_CFLAGS+=-O2
@@ -87,9 +97,9 @@ ${CSIM_BUILD_DIR}/%.o: %.ino
 	echo $@
 	${CCACHE} g++ ${CSIM_CFLAGS} -x c++ -c ${CSIM_INC} $< -o $@
 
-${SKETCH_NAME}_csim: ${CSIM_BUILD_DIR} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o
+${SKETCH_NAME}_csim: ${CSIM_BUILD_DIR} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o 
 	echo $@
-	g++ -g ${CSIM_CFLAGS} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o -o $@         
+	g++ -g ${CSIM_CFLAGS} ${CSIM_OBJS} ${CSIM_BUILD_DIR}/${SKETCH_NAME}.o ${CSIM_LDLIBS} -o $@         
 
 csim: ${SKETCH_NAME}_csim 
 	cp $< $@

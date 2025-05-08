@@ -1,13 +1,35 @@
+#ifndef CSIM
 // Uncomment one of the following display boards:
 //#include "elecrow5.h"     // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "elecrow23.h"      // use ESP32-WROOM-DA board type, huge app partition, needs manual boot button 
 #include "elecrow7.h"    // use ESP32S3-DEV board, OPI-PSRAM, huge app partition
 //#include "waveshare43.h"
 //#include "lilgoRGB.h"
-
 #include <Arduino.h>
 #include "WiFiClient.h"
-#define ESP32CORE_V2
+#endif
+
+#ifdef CSIM
+#include "lvgl.h"
+#include "demos/lv_demos.h"
+
+#include "driver_backends.h"
+#include "simulator_util.h"
+#include "simulator_settings.h"
+
+#define ESP_PANEL_LCD_H_RES 800
+#define ESP_PANEL_LCD_V_RES 480
+extern simulator_settings_t settings;
+
+static inline void panel_setup() {
+  lv_init();
+  driver_backends_register();
+  settings.window_height = ESP_PANEL_LCD_H_RES;
+  settings.window_width = ESP_PANEL_LCD_V_RES; 
+  driver_backends_init_backend((char *)"X11");
+  driver_backends_init_backend((char *)"EVDEV");
+}
+#endif
 
 #ifndef GIT_VERSION
 #define GIT_VERSION "gitversion"
@@ -16,17 +38,14 @@
 #include "espNowMux.h"
 #include "reliableStream.h"
 #include "confPanel.h"
-
-#if ESP_ARDUINO_VERSION_MINOR >= 2
-//#error esp32 core 3.2.0 breaks with some i2c errors, use 3.1.3
-#endif
+#include "serialLog.h"
 
 // enable font in ~/Arduino/libraries/lv_conf.h ie: #define LV_FONT_MONTSERRAT_42 1
 static const lv_font_t *default_font = &lv_font_montserrat_32;
 static const int row_height = 35;
 
 #include <vector>
-#include <string>;
+#include <string>
 using namespace std;
 
 #include <algorithm>
@@ -89,7 +108,7 @@ public:
       sscanf(words[3].c_str(), "%f", &n.min);
       sscanf(words[4].c_str(), "%f", &n.max);
       sscanf(words[5].c_str(), "%f", &n.def);
-      sscanf(words[6].c_str(), "%f", &n.wrap);
+      sscanf(words[6].c_str(), "%d", &n.wrap);
       strncpy(n.enumlabels, words[7].c_str(), sizeof(n.enumlabels));
       sscanf(words[8].c_str(), "%d", &n.flags);
       if (strchr(n.enumlabels, '/') != NULL) {
@@ -460,7 +479,7 @@ public:
             }
             Serial.printf("Received valid schema length %d\n", slines.size());
             if (welcomeLabel != NULL)
-              lv_label_set_text_fmt(welcomeLabel, sfmt("CONNECTED (%.3f sec)", millis() / 1000.0).c_str());
+              lv_label_set_text_fmt(welcomeLabel, "CONNECTED (%.3f sec)", millis() / 1000.0);
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
             stream->write("SCHEMA\n");
@@ -482,7 +501,7 @@ public:
   }
 };
 
-//JStuff j; // Jstuff seems to disable to makeEspArduino build dunno 
+JStuff j; // Jstuff seems to disable to makeEspArduino build dunno 
 
 //NO ReliableTcpClient client("0.0.0.0", 4444);
 ReliableStreamESPNow client("CP");
@@ -513,6 +532,5 @@ void loop() {
   lv_obj_set_style_text_color(cpt.welcomeLabel, lv_palette_main(toggle ? LV_PALETTE_RED : LV_PALETTE_GREEN), LV_PART_MAIN);
   lv_timer_handler();
   lv_tick_inc(1);
-  //Serial.printf("loop() %d\n", (int)toggle);
   delay(1);
 }

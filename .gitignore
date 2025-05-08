@@ -4,3 +4,4 @@ build*.sh
 Vagrantfile
 *.out
 esp*.mk
+csim lvglConfigPanel_csim spiff
