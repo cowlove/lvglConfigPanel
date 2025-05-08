@@ -388,7 +388,13 @@ class ConfPanelTransportScreen {
   HzTimer schemaRequestTimer, runTimer;
 public:
   ConfPanelTransportScreen(ReliableStreamInterface *s)
-    : stream(s), schemaRequestTimer(3), runTimer(5) {}
+    : stream(s), 
+#ifdef CSIM
+    schemaRequestTimer(.001),
+#else
+schemaRequestTimer(3),
+#endif
+    runTimer(5) {}
   void run() {
     string s;
     for (auto p : panels) {
@@ -462,15 +468,15 @@ public:
   void onRecv(const char *buf, int n) {
     string x;
     x.assign(buf, n);
-    //Serial.printf("processData() %d bytes:\n%s\n", n, x.c_str());
+    //printf("processData() %d bytes:\n%s\n", n, x.c_str());
     lb.add((char *)buf, n, [this](const char *l) {
-      //Serial.printf("Got line: %s\n", l);
+      //printf("Got line: %s\n", l);
       if (parsingSchema) {
-        //Serial.printf("parsing schema %d: %s\n", schema_idx, l);
+        printf("parsing schema %d: %s\n", schema_idx, l);
         if (strcmp(l, "END") == 0)
           parsingSchema = false;
         if (strcmp(l, "END") == 0 && panels.size() == schema_idx) {
-          //Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
+          Serial.printf("creating schema %d:\n%s\n", schema_idx, schema.c_str());
           vector<string> slines = split(schema.c_str(), "\n");
           if (slines.size() == expectedSchemaLength) {
             panels.push_back(new ConfPanel(schema_idx, schema, createTile()));
@@ -511,7 +517,7 @@ void setup() {
   //delay(1500);
   //j.begin();
   //j.run();                
-  espNowMux.defaultChannel = 11;
+  espNowMux.defaultChannel = 4;
   //espNowMux.stop();
   espNowMux.firstInit = true;
 
@@ -528,9 +534,7 @@ void setup() {
 void loop() {
   //j.run();
   cpt.run();
-  bool toggle = ( millis() / 1000) % 2 == 1;
-  lv_obj_set_style_text_color(cpt.welcomeLabel, lv_palette_main(toggle ? LV_PALETTE_RED : LV_PALETTE_GREEN), LV_PART_MAIN);
   lv_timer_handler();
-  lv_tick_inc(1);
-  delay(1);
+  lv_tick_inc(10);
+  delay(10);
 }
