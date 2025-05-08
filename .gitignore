@@ -5,3 +5,8 @@ Vagrantfile
 *.out
 esp*.mk
 csim lvglConfigPanel_csim spiff
+esp32csim
+csim
+spiff
+jimlib
+*_csim

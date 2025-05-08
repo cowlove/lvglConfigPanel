@@ -2,6 +2,8 @@ BOARD ?= esp32s3
 PORT ?= /dev/ttyUSB0
 CHIP ?= esp32
 #ESP_ROOT=${HOME}/esp32
+IGNORE_STATE=1
+
 LIBS=$(foreach L,esp32jimlib Arduino_CRC32 Adafruit_HX711 PubSubClient \
 	OneWireNg ArduinoJson DHT_sensor_library Adafruit_Unified_Sensor \
         TAMC_GT911 LovyanGFX lvgl esp32-micro-sdcard\
