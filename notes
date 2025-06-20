@@ -1,3 +1,11 @@
+Testing with espnow pipes
+
+mkfifo /tmp/fifo1
+mkfifo /tmp/fifo2
+./winglevlr_csim --espnowPipe /tmp/fifo2 /tmp/fifo1  
+./lvglConfigPanel_csim --espnowPipe /tmp/fifo1 /tmp/fifo2 
+
+
 Setting up lv_
 
 sudo apt-get install libwayland-dev libxkbcommon-dev libwayland-bin wayland-protocols

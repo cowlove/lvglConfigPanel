@@ -7,8 +7,8 @@ ReliableStreamESPNow client("CP");
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
-  espNowMux.defaultChannel = 4;
-  espNowMux.firstInit = true;
+  defaultEspNowMux.defaultChannel = 4;
+  defaultEspNowMux.firstInit = true;
   Serial.begin(115200/*, SERIAL_8N1*/); 
   //j.mqtt.active = j.jw.enabled = false;
   panel_setup();
