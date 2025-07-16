@@ -8,7 +8,7 @@ LIBS=$(foreach L,esp32jimlib Arduino_CRC32 Adafruit_HX711 PubSubClient \
 	OneWireNg ArduinoJson DHT_sensor_library Adafruit_Unified_Sensor \
         TAMC_GT911 LovyanGFX lvgl esp32-micro-sdcard\
 	,${HOME}/Arduino/libraries/${L})
-PART_FILE=/home/jim/esp32/tools/partitions/huge_app.csv
+PART_FILE=./partitions.csv
 
 UPLOAD_PORT ?= /dev/ttyUSB0
 BUILD_EXTRA_FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\" 
@@ -51,8 +51,9 @@ XG=|${HOME}/Arduino/libraries/LovyanGFX/examples
 XH=|${LVGL}/src/libs/thorvg/rapidjson/msinttypes
 XI=|${LVGL}/src/draw/sw/blend/helium
 XJ=|${LVGL}/src/draw/sw/blend/neon
+XK=|${HOME}/Arduino/libraries/esp32csim
 
-EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)$(XH)$(XI)$(XJ)
+EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)$(XH)$(XI)$(XJ)${XK}
 
 
 
