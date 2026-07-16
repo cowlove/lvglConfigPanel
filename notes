@@ -1,4 +1,5 @@
 Needs these libs:  arduino-cli lib install lvgl@9.2.2 LovyanGFX@1.2.7
+arduijo-cli lib uninstall TFT_eSPI
 
 
 Testing with espnow pipes
