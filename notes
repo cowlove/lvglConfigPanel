@@ -1,3 +1,6 @@
+Needs these libs:  arduino-cli lib install lvgl@9.2.2 LovyanGFX@1.2.7
+
+
 Testing with espnow pipes
 
 mkfifo /tmp/fifo1
@@ -8,7 +11,7 @@ mkfifo /tmp/fifo2
 
 Setting up lv_
 
-sudo apt-get install libwayland-dev libxkbcommon-dev libwayland-bin wayland-protocols
+sudo apt-get install libwayland-dev libxkbcommon-dev libwayland-bin wayland-protocols libevdev-dev
 git clone https://github.com/lvgl/lv_port_linux.git
 cd lv_port_linux/
 git submodule update --init --recursive
