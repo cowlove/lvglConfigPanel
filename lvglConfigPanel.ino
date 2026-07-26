@@ -13,6 +13,7 @@ void setup() {
   //j.mqtt.active = j.jw.enabled = false;
   panel_setup();
   cpt.createWelcomeTile();
+  cpt.createDataCollectionTile();
   //lv_demo_widgets();
 }
 

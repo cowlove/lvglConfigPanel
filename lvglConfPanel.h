@@ -463,6 +463,18 @@ public:
 
       //lv_obj_align_to(obj, cont2, LV_ALIGN_RIGHT_MID, 0, 0);
   }
+  void createDataCollectionTile() {
+      lv_obj_t *tile = createTile();
+
+      lv_obj_t *title = lv_label_create(tile);
+      lv_label_set_text(title, "DATA COLLECTION");
+      lv_obj_set_style_text_font(title, default_font, LV_PART_MAIN | LV_STATE_DEFAULT);
+      lv_obj_align(title, LV_ALIGN_CENTER, 0, -30);
+
+      lv_obj_t *placeholder = lv_label_create(tile);
+      lv_label_set_text(placeholder, "Analysis tools coming soon");
+      lv_obj_align(placeholder, LV_ALIGN_CENTER, 0, 20);
+  }
   void onRecv(const char *buf, int n) {
     string x;
     x.assign(buf, n);
