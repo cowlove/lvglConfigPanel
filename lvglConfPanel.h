@@ -388,11 +388,25 @@ class ConfPanelTransportScreen {
   LineBuffer lb;
   vector<ConfPanel *> panels;
   bool initialized = false;
-  uint32_t lastSchemaRequestTime = -1000;
-  HzTimer schemaRequestTimer, runTimer;
+  static constexpr uint32_t initialSchemaRequestIntervalMs = 250;
+  static constexpr uint32_t maxSchemaRequestIntervalMs = 10000;
+  uint32_t lastSchemaRequestTime = 0;
+  uint32_t schemaRequestIntervalMs = initialSchemaRequestIntervalMs;
+  HzTimer runTimer;
 public:
   ConfPanelTransportScreen(ReliableStreamInterface *s)
-    : stream(s), schemaRequestTimer(3), runTimer(5) {}
+    : stream(s), runTimer(5) {}
+  void requestSchema() {
+    printf("Requesting schema...\n");
+    stream->write("SCHEMA\n");
+    lastSchemaRequestTime = millis();
+    schemaRequestIntervalMs = min(maxSchemaRequestIntervalMs,
+        schemaRequestIntervalMs * 2);
+  }
+  void resetSchemaRequestBackoff() {
+    lastSchemaRequestTime = millis();
+    schemaRequestIntervalMs = initialSchemaRequestIntervalMs;
+  }
   void run() {
     string s;
     for (auto p : panels) {
@@ -407,11 +421,9 @@ public:
         p->run();
       }
     }
-    if (panels.size() == 0 && schemaRequestTimer.tick()) {
-      printf("Requesting schema...\n"); 
-      stream->write("SCHEMA\n");
-      lastSchemaRequestTime = millis();
-    }
+    if (panels.size() == 0 &&
+        millis() - lastSchemaRequestTime >= schemaRequestIntervalMs)
+      requestSchema();
     if (!initialized) {
       if (WiFi.isConnected())
         udp.begin(4444);
@@ -496,10 +508,9 @@ public:
             Serial.printf("Received valid schema length %d\n", slines.size());
             if (welcomeLabel != NULL)
               lv_label_set_text_fmt(welcomeLabel, "CONNECTED (%.3f sec)", millis() / 1000.0);
+            resetSchemaRequestBackoff();
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
-            stream->write("SCHEMA\n");
-            lastSchemaRequestTime = millis();
           }
           parsingSchema = false;
         }
