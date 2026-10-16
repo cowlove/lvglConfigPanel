@@ -506,8 +506,12 @@ public:
               createTile();
             }
             Serial.printf("Received valid schema length %d\n", slines.size());
-            if (welcomeLabel != NULL)
-              lv_label_set_text_fmt(welcomeLabel, "CONNECTED (%.3f sec)", millis() / 1000.0);
+            if (welcomeLabel != NULL) {
+              unsigned long connectedTimeMs = millis();
+              lv_label_set_text_fmt(welcomeLabel, "CONNECTED (%u.%03u sec)",
+                  (unsigned int)(connectedTimeMs / 1000UL),
+                  (unsigned int)(connectedTimeMs % 1000UL));
+            }
             resetSchemaRequestBackoff();
           } else {
             Serial.printf("Received schema length %d != expected length %d, discarding\n", slines.size(), expectedSchemaLength);
