@@ -52,8 +52,9 @@ XH=|${LVGL}/src/libs/thorvg/rapidjson/msinttypes
 XI=|${LVGL}/src/draw/sw/blend/helium
 XJ=|${LVGL}/src/draw/sw/blend/neon
 XK=|${HOME}/Arduino/libraries/esp32csim
+XL=|${HOME}/Arduino/libraries/U8g2/sys
 
-EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)$(XH)$(XI)$(XJ)${XK}
+EXCLUDE_DIRS=$(X0)$(X1)$(X2)$(X3)$(X4)$(X5)$(X6)$(X7)$(X8)$(X9)$(XA)$(XB)$(XC)$(XD)$(XE)$(XF)$(XG)$(XH)$(XI)$(XJ)${XK}${XL}
 
 
 
@@ -132,5 +133,4 @@ uc:
 
 backtrace:
 	tr ' ' '\n' | addr2line -f -i -e ./build/${BOARD}/*.elf
-
 
