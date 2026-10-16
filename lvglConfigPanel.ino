@@ -3,7 +3,7 @@
 JStuff j; // Jstuff seems to disable to makeEspArduino build dunno 
 
 //NO ReliableTcpClient client("0.0.0.0", 4444);
-ReliableStreamESPNow client("CP", true, 64 * 1024, 64 * 1024);
+ReliableStreamESPNow client("CP", true, 128 * 1024, 128 * 1024);
 ConfPanelTransportScreen cpt(&client);
 
 void setup() {
